@@ -7,10 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CBAI.Tests.Unit;
 
 /// <summary>
-/// Exercises the (not-yet-implemented) demo/seed-data pipeline described in the
-/// "Test Foundation &amp; Seed-Data Setup" design note. These tests are expected to fail
-/// until <see cref="DemoDataSeeder"/> and <see cref="MemberProfileFaker"/> are implemented —
-/// they establish the contract a later slice must satisfy.
+/// Exercises the demo/seed-data pipeline described in the
+/// "Test Foundation &amp; Seed-Data Setup" design note, ensuring seeding creates the
+/// expected roles/users and remains idempotent.
 /// </summary>
 [TestClass]
 public sealed class SeedDataTests
