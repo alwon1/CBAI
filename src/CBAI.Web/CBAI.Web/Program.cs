@@ -7,7 +7,10 @@ using CBAI.Web.Client.Pages;
 using CBAI.Web.Components;
 using CBAI.Web.Components.Account;
 using CBAI.Web.Data;
+using CBAI.Web.Data.Seed;
+using CBAI.Web.Membership;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,18 +44,27 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.SignIn.RequireConfirmedAccount = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.Configure<SeedDataOptions>(
+    builder.Configuration.GetSection(SeedDataOptions.SectionName));
+
+builder.Services.AddScoped<IMembershipApplicationService, MembershipApplicationService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    await db.Database.MigrateAsync();
+
+    var seedOptions = scope.ServiceProvider.GetRequiredService<IOptions<SeedDataOptions>>().Value;
+    await DemoDataSeeder.SeedAsync(scope.ServiceProvider, seedOptions);
 }
 
 // Configure the HTTP request pipeline.

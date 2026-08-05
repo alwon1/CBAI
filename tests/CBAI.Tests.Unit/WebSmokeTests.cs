@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace CBAI.Tests;
+namespace CBAI.Tests.Unit;
 
 [TestClass]
 public sealed class WebSmokeTests
