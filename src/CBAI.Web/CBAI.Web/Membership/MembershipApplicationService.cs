@@ -157,11 +157,12 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
             db.ChangeTracker.Clear();
             throw new InvalidMembershipApplicationTransitionException(
-                $"Application '{application.Id}' is no longer {expectedStatus}; another request completed the transition first.");
+                $"Application '{application.Id}' is no longer {expectedStatus}; another request completed the transition first.",
+                ex);
         }
     }
 }
