@@ -1,0 +1,13 @@
+{
+  "name": "CBAI",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0",
+  "postCreateCommand": "dotnet restore CBAI.slnx",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit"
+      ]
+    }
+  }
+}

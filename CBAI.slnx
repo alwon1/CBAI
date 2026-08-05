@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CBAI.AppHost/CBAI.AppHost.csproj" />
+    <Project Path="src/CBAI.ServiceDefaults/CBAI.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/src/CBAI.Web/">
+    <Project Path="src/CBAI.Web/CBAI.Web.Client/CBAI.Web.Client.csproj" />
+    <Project Path="src/CBAI.Web/CBAI.Web/CBAI.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CBAI.Tests/CBAI.Tests.csproj" />
+  </Folder>
+</Solution>
