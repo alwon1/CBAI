@@ -61,7 +61,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    await db.Database.MigrateAsync();
 
     var seedOptions = scope.ServiceProvider.GetRequiredService<IOptions<SeedDataOptions>>().Value;
     await DemoDataSeeder.SeedAsync(scope.ServiceProvider, seedOptions);
