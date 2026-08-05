@@ -67,13 +67,6 @@ public static class DemoDataSeeder
         foreach (var profile in profiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var existingUser = await userManager.FindByEmailAsync(profile.Email);
-            if (existingUser is not null)
-            {
-                continue;
-            }
-
             await EnsureUserAsync(userManager, profile.Email, BogusAccountPassword, Roles.Member, profile.PhoneNumber);
         }
     }
