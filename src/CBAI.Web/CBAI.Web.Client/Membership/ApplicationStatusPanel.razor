@@ -1,0 +1,54 @@
+@namespace CBAI.Web.Client.Membership
+
+<FluentCard Width="100%" data-testid="application-status-panel">
+    <h2>Membership Application</h2>
+
+    <p>
+        <strong>Status:</strong>
+        <span data-testid="status-value">@Application.Status</span>
+    </p>
+
+    <p>
+        <strong>Applicant:</strong> <span data-testid="applicant-name">@Application.ApplicantName</span>
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(Application.SponsorName))
+    {
+        <p><strong>Sponsor:</strong> <span data-testid="sponsor-name">@Application.SponsorName</span></p>
+    }
+    else
+    {
+        <p data-testid="no-sponsor">No sponsor assigned yet.</p>
+    }
+
+    @if (Application.Status is ApplicationStatusValue.Approved or ApplicationStatusValue.Rejected)
+    {
+        <p data-testid="decision-notes">@(Application.DecisionNotes ?? "No notes provided.")</p>
+    }
+
+    <h3>Audit Trail</h3>
+    @if (Application.AuditTrail.Count == 0)
+    {
+        <p data-testid="audit-empty">No activity recorded yet.</p>
+    }
+    else
+    {
+        <ul data-testid="audit-trail">
+            @foreach (var entry in Application.AuditTrail)
+            {
+                <li data-testid="audit-entry">
+                    @entry.TimestampUtc.ToString("u") &mdash; @entry.Action by @entry.PerformedBy
+                    @if (!string.IsNullOrWhiteSpace(entry.Details))
+                    {
+                        <text>: @entry.Details</text>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</FluentCard>
+
+@code {
+    [Parameter]
+    public required ApplicationStatusViewModel Application { get; set; }
+}

@@ -8,6 +8,7 @@ using CBAI.Web.Components;
 using CBAI.Web.Components.Account;
 using CBAI.Web.Data;
 using CBAI.Web.Data.Seed;
+using CBAI.Web.Membership;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -52,6 +53,8 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.Configure<SeedDataOptions>(
     builder.Configuration.GetSection(SeedDataOptions.SectionName));
+
+builder.Services.AddScoped<IMembershipApplicationService, MembershipApplicationService>();
 
 var app = builder.Build();
 
