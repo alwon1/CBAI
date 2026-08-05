@@ -19,10 +19,11 @@
     <Using Include="System.Net" />
     <Using Include="Microsoft.AspNetCore.Mvc.Testing" />
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <Using Include="CBAI.Tests.Shared" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CBAI.Web\CBAI.Web\CBAI.Web.csproj" />
+    <ProjectReference Include="..\CBAI.Tests.Shared\CBAI.Tests.Shared.csproj" />
   </ItemGroup>
 
 </Project>

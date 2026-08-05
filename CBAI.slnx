@@ -8,6 +8,8 @@
     <Project Path="src/CBAI.Web/CBAI.Web/CBAI.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/CBAI.Tests/CBAI.Tests.csproj" />
+    <Project Path="tests/CBAI.Tests.Shared/CBAI.Tests.Shared.csproj" />
+    <Project Path="tests/CBAI.Tests.Unit/CBAI.Tests.Unit.csproj" />
+    <Project Path="tests/CBAI.Tests.UI/CBAI.Tests.UI.csproj" />
   </Folder>
 </Solution>
