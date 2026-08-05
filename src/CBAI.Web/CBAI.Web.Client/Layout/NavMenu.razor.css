@@ -1,9 +1,19 @@
-::deep fluent-nav-menu {
+.nav-menu {
+    height: 100%;
+}
+
+.nav-menu ::deep fluent-nav-menu {
     height: 100%;
     --neutral-fill-stealth-rest: transparent;
-    --neutral-fill-stealth-hover: rgba(255, 255, 255, 0.1);
-    --neutral-fill-stealth-active: rgba(255, 255, 255, 0.2);
-    --neutral-foreground-rest: #ffffff;
-    --accent-fill-rest: rgba(255, 255, 255, 0.25);
-    --accent-foreground-rest: #ffffff;
+    --neutral-fill-secondary-rest: rgba(0, 0, 0, 0.06);
+    --neutral-foreground-rest: #1f1f1f;
+    --accent-fill-rest: #0f5b94;
+}
+
+form {
+    padding-inline: 0.5rem;
+}
+
+form ::deep fluent-button {
+    width: 100%;
 }
