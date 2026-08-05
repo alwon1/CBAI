@@ -11,38 +11,50 @@
 
 <PageTitle>Two-factor authentication</PageTitle>
 
-<h1>Two-factor authentication</h1>
-<hr />
-<StatusMessage Message="@message" />
-<p>Your login is protected with an authenticator app. Enter your authenticator code below.</p>
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-            <input type="hidden" name="RememberMe" value="@RememberMe" />
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" />
-                <label for="Input.TwoFactorCode" class="form-label">Authenticator code</label>
-                <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
-            </div>
-            <div class="checkbox mb-3">
-                <label for="remember-machine" class="form-label">
-                    <InputCheckbox @bind-Value="Input.RememberMachine" />
-                    Remember this machine
-                </label>
-            </div>
+<div style="max-width: 40rem; margin: 4rem auto; padding: 0 1rem;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
             <div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                <h1 style="margin: 0;">Two-factor authentication</h1>
+                <p style="margin: 0.5rem 0 0; color: rgba(0, 0, 0, 0.65);">Enter the code from your authenticator app.</p>
             </div>
-        </EditForm>
-    </div>
+
+            <StatusMessage Message="@message" />
+
+            <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                <input type="hidden" name="RememberMe" value="@RememberMe" />
+                <DataAnnotationsValidator />
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <FluentTextField @bind-Value="Input.TwoFactorCode"
+                                     Name="Input.TwoFactorCode"
+                                     Label="Authenticator code"
+                                     AutoComplete="one-time-code"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Text"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.TwoFactorCode" />
+
+                    <FluentCheckbox Name="Input.RememberMachine" @bind-CheckState="Input.RememberMachine">
+                        Remember this machine
+                    </FluentCheckbox>
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  CustomStyle="width: 100%;">
+                        Log in
+                    </FluentButton>
+                </div>
+            </EditForm>
+
+            <p style="margin: 0;">
+                Don't have access to your authenticator device? You can
+                <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
+            </p>
+        </div>
+    </section>
 </div>
-<p>
-    Don't have access to your authenticator device? You can
-    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
-</p>
 
 @code {
     private string? message;
@@ -69,7 +81,7 @@
     private async Task OnValidSubmitAsync()
     {
         var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
-        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine == true);
         var userId = await UserManager.GetUserIdAsync(user);
 
         if (result.Succeeded)
@@ -98,6 +110,6 @@
         public string? TwoFactorCode { get; set; }
 
         [Display(Name = "Remember this machine")]
-        public bool RememberMachine { get; set; }
+        public bool? RememberMachine { get; set; } = false;
     }
 }

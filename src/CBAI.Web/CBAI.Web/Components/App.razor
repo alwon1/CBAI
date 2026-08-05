@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,17 +8,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["CBAI.Web.styles.css"]" />
+    <script src="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js"]" type="module" async></script>
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-    <Routes @rendermode="PageRenderMode" />
-    <ReconnectModal />
+    <FluentDesignSystemProvider>
+        <Routes @rendermode="PageRenderMode" />
+        <ReconnectModal />
+    </FluentDesignSystemProvider>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
 </body>

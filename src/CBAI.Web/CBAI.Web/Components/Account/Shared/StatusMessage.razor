@@ -1,9 +1,10 @@
-﻿@if (!string.IsNullOrEmpty(DisplayMessage))
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+
+@if (!string.IsNullOrEmpty(DisplayMessage))
 {
-    var statusMessageClass = DisplayMessage.StartsWith("Error") ? "danger" : "success";
-    <div class="alert alert-@statusMessageClass" role="alert">
+    <FluentMessageBar Intent="@GetIntent(DisplayMessage)" AllowDismiss="false">
         @DisplayMessage
-    </div>
+    </FluentMessageBar>
 }
 
 @code {
@@ -16,6 +17,11 @@
     private HttpContext HttpContext { get; set; } = default!;
 
     private string? DisplayMessage => Message ?? messageFromCookie;
+
+    private static MessageIntent GetIntent(string displayMessage)
+        => displayMessage.StartsWith("Error", StringComparison.OrdinalIgnoreCase)
+            ? MessageIntent.Error
+            : MessageIntent.Success;
 
     protected override void OnInitialized()
     {

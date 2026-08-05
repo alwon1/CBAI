@@ -1,17 +1,21 @@
 ﻿@inherits LayoutComponentBase
 @layout CBAI.Web.Client.Layout.MainLayout
-
-<h1>Manage your account</h1>
+@using Microsoft.FluentUI.AspNetCore.Components
 
 <div>
-    <h2>Change your account settings</h2>
-    <hr />
-    <div class="row">
-        <div class="col-lg-3">
-            <ManageNavMenu />
-        </div>
-        <div class="col-lg-9">
-            @Body
-        </div>
+    <div>
+        <h1>Manage your account</h1>
+        <p>Change your account settings.</p>
     </div>
+
+    <FluentGrid Spacing="4">
+        <FluentGridItem xs="12" md="3">
+            <ManageNavMenu />
+        </FluentGridItem>
+        <FluentGridItem xs="12" md="9">
+            <FluentCard>
+                @Body
+            </FluentCard>
+        </FluentGridItem>
+    </FluentGrid>
 </div>

@@ -14,23 +14,38 @@
 
 <PageTitle>Resend email confirmation</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
-<hr />
-<StatusMessage Message="@message" />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+<div style="max-width: 36rem; margin: 4rem auto; padding: 0 1rem;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <h1 style="margin: 0;">Resend email confirmation</h1>
+                <p style="margin: 0.5rem 0 0; color: rgba(0, 0, 0, 0.65);">Enter your email.</p>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
-        </EditForm>
-    </div>
+
+            <StatusMessage Message="@message" />
+
+            <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <DataAnnotationsValidator />
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <FluentTextField @bind-Value="Input.Email"
+                                     Name="Input.Email"
+                                     Label="Email"
+                                     Placeholder="name@example.com"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.Email" />
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  CustomStyle="width: 100%;">
+                        Resend
+                    </FluentButton>
+                </div>
+            </EditForm>
+        </div>
+    </section>
 </div>
 
 @code {

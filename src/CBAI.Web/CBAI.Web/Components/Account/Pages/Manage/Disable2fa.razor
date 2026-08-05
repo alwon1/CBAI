@@ -2,6 +2,7 @@
 
 @using Microsoft.AspNetCore.Identity
 @using CBAI.Web.Data
+@using Microsoft.FluentUI.AspNetCore.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
@@ -12,22 +13,20 @@
 <StatusMessage />
 <h3>Disable two-factor authentication (2FA)</h3>
 
-<div class="alert alert-warning" role="alert">
-    <p>
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+    <FluentMessageBar Intent="MessageIntent.Warning" AllowDismiss="false">
         <strong>This action only disables 2FA.</strong>
-    </p>
-    <p>
-        Disabling 2FA does not change the keys used in authenticator apps. If you wish to change the key
-        used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
-    </p>
-</div>
+        <div>
+            Disabling 2FA does not change the keys used in authenticator apps. If you wish to change the key used in an authenticator app you should
+            <FluentAnchor Href="Account/Manage/ResetAuthenticator" Appearance="Appearance.Hypertext">reset your authenticator keys</FluentAnchor>.
+        </div>
+    </FluentMessageBar>
 
-<div>
     <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
         <AntiforgeryToken />
-        <button class="btn btn-danger" type="submit">Disable 2FA</button>
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Disable 2FA</FluentButton>
     </form>
-</div>
+</FluentStack>
 
 @code {
     private ApplicationUser? user;

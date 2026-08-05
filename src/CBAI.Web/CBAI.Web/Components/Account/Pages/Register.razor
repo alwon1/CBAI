@@ -17,41 +17,71 @@
 
 <PageTitle>Register</PageTitle>
 
-<h1>Register</h1>
+<div style="max-width: 72rem; margin: 4rem auto; padding: 0 1rem; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); align-items: start;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <h1 style="margin: 0;">Register</h1>
+                <p style="margin: 0.5rem 0 0; color: rgba(0, 0, 0, 0.65);">Create a new local account.</p>
+            </div>
 
-<div class="row">
-    <div class="col-lg-6">
-        <StatusMessage Message="@Message" />
-        <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
-            <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            <StatusMessage Message="@Message" />
+
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+                <DataAnnotationsValidator />
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <FluentTextField @bind-Value="Input.Email"
+                                     Name="Input.Email"
+                                     Label="Email"
+                                     Placeholder="name@example.com"
+                                     AutoComplete="username"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.Email" />
+
+                    <FluentTextField @bind-Value="Input.Password"
+                                     Name="Input.Password"
+                                     Label="Password"
+                                     Placeholder="password"
+                                     AutoComplete="new-password"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Password"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.Password" />
+
+                    <FluentTextField @bind-Value="Input.ConfirmPassword"
+                                     Name="Input.ConfirmPassword"
+                                     Label="Confirm password"
+                                     Placeholder="password"
+                                     AutoComplete="new-password"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Password"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.ConfirmPassword" />
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  CustomStyle="width: 100%;">
+                        Register
+                    </FluentButton>
+                </div>
+            </EditForm>
+        </div>
+    </section>
+
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <h2 style="margin: 0;">Use another service to register</h2>
+                <p style="margin: 0.5rem 0 0; color: rgba(0, 0, 0, 0.65);">Choose a configured external provider.</p>
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.Password">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.ConfirmPassword">Confirm Password</label>
-                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
             <ExternalLoginPicker />
-        </section>
-    </div>
+        </div>
+    </section>
 </div>
 
 @code {

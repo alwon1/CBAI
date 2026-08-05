@@ -11,26 +11,45 @@
 
 <PageTitle>Recovery code verification</PageTitle>
 
-<h1>Recovery code verification</h1>
-<hr />
-<StatusMessage Message="@message" />
-<p>
-    You have requested to log in with a recovery code. This login will not be remembered until you provide
-    an authenticator app code at log in or disable 2FA and log in again.
-</p>
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.RecoveryCode" id="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="RecoveryCode" />
-                <label for="Input.RecoveryCode" class="form-label">Recovery Code</label>
-                <ValidationMessage For="() => Input.RecoveryCode" class="text-danger" />
+<div style="max-width: 40rem; margin: 4rem auto; padding: 0 1rem;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <h1 style="margin: 0;">Recovery code verification</h1>
+                <p style="margin: 0.5rem 0 0; color: rgba(0, 0, 0, 0.65);">
+                    You have requested to log in with a recovery code.
+                </p>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-        </EditForm>
-    </div>
+
+            <StatusMessage Message="@message" />
+
+            <p style="margin: 0;">
+                This login will not be remembered until you provide an authenticator app code at log in or disable 2FA and log in again.
+            </p>
+
+            <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <DataAnnotationsValidator />
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <FluentTextField @bind-Value="Input.RecoveryCode"
+                                     Name="Input.RecoveryCode"
+                                     Label="Recovery code"
+                                     Placeholder="Recovery code"
+                                     AutoComplete="off"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Text"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.RecoveryCode" />
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  CustomStyle="width: 100%;">
+                        Log in
+                    </FluentButton>
+                </div>
+            </EditForm>
+        </div>
+    </section>
 </div>
 
 @code {

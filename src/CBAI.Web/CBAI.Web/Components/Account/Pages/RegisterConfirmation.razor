@@ -12,21 +12,30 @@
 
 <PageTitle>Register confirmation</PageTitle>
 
-<h1>Register confirmation</h1>
+<div style="max-width: 42rem; margin: 4rem auto; padding: 0 1rem;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <h1 style="margin: 0;">Register confirmation</h1>
+            <StatusMessage Message="@statusMessage" />
 
-<StatusMessage Message="@statusMessage" />
-
-@if (emailConfirmationLink is not null)
-{
-    <p>
-        This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-        Normally this would be emailed: <a href="@emailConfirmationLink">Click here to confirm your account</a>
-    </p>
-}
-else
-{
-    <p role="alert">Please check your email to confirm your account.</p>
-}
+            @if (emailConfirmationLink is not null)
+            {
+                <FluentMessageBar Intent="MessageIntent.Info" AllowDismiss="false">
+                    This app does not currently have a real email sender registered. See
+                    <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
+                    Normally this would be emailed:
+                    <a href="@emailConfirmationLink">click here to confirm your account</a>.
+                </FluentMessageBar>
+            }
+            else
+            {
+                <FluentMessageBar Intent="MessageIntent.Success" AllowDismiss="false">
+                    Please check your email to confirm your account.
+                </FluentMessageBar>
+            }
+        </div>
+    </section>
+</div>
 
 @code {
     private string? emailConfirmationLink;

@@ -6,8 +6,10 @@
 
 <PageTitle>Auth</PageTitle>
 
-<h1>You are authenticated</h1>
+<FluentCard Width="100%">
+    <h1>You are authenticated</h1>
 
-<AuthorizeView>
-    Hello @context.User.Identity?.Name!
-</AuthorizeView>
+    <AuthorizeView>
+        <p>Hello @context.User.Identity?.Name!</p>
+    </AuthorizeView>
+</FluentCard>

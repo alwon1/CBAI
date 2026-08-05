@@ -2,6 +2,13 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<FluentCard Width="100%">
+    <h1>Hello, world!</h1>
+    <p>Welcome to your new app.</p>
 
-Welcome to your new app.
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+        <FluentAnchor Href="counter" Appearance="Appearance.Accent">Open Counter</FluentAnchor>
+        <FluentAnchor Href="weather" Appearance="Appearance.Neutral">View Weather</FluentAnchor>
+        <FluentAnchor Href="auth" Appearance="Appearance.Stealth">Auth sample</FluentAnchor>
+    </div>
+</FluentCard>

@@ -1,23 +1,27 @@
-﻿<StatusMessage Message="@StatusMessage" />
-<h3>Recovery codes</h3>
-<div class="alert alert-warning" role="alert">
-    <p>
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <StatusMessage Message="@StatusMessage" />
+    }
+
+    <h3>Recovery codes</h3>
+
+    <FluentMessageBar Intent="MessageIntent.Warning" AllowDismiss="false">
         <strong>Put these codes in a safe place.</strong>
-    </p>
-    <p>
-        If you lose your device and don't have the recovery codes you will lose access to your account.
-    </p>
-</div>
-<div class="row">
-    <div class="col-md-12">
-        @foreach (var recoveryCode in RecoveryCodes)
-        {
-            <div>
+        <div>If you lose your device and don't have the recovery codes you will lose access to your account.</div>
+    </FluentMessageBar>
+
+    <FluentCard>
+        <div>
+            @foreach (var recoveryCode in RecoveryCodes)
+            {
                 <code class="recovery-code">@recoveryCode</code>
-            </div>
-        }
-    </div>
-</div>
+            }
+        </div>
+    </FluentCard>
+</FluentStack>
 
 @code {
     [Parameter]

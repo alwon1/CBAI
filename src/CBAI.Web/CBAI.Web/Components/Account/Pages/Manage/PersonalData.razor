@@ -2,6 +2,7 @@
 
 @using Microsoft.AspNetCore.Identity
 @using CBAI.Web.Data
+@using Microsoft.FluentUI.AspNetCore.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
@@ -11,21 +12,20 @@
 <StatusMessage />
 <h3>Personal Data</h3>
 
-<div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
-        <form action="Account/Manage/DownloadPersonalData" method="post">
-            <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">Delete</a>
-        </p>
-    </div>
-</div>
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+    <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
+
+    <FluentMessageBar Intent="MessageIntent.Warning" AllowDismiss="false">
+        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
+    </FluentMessageBar>
+
+    <form action="Account/Manage/DownloadPersonalData" method="post">
+        <AntiforgeryToken />
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Download</FluentButton>
+    </form>
+
+    <FluentAnchor Href="Account/Manage/DeletePersonalData" Appearance="Appearance.Accent">Delete</FluentAnchor>
+</FluentStack>
 
 @code {
     [CascadingParameter]

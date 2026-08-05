@@ -1,4 +1,5 @@
-﻿@using Microsoft.AspNetCore.Authentication
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using CBAI.Web.Data
 
@@ -7,25 +8,32 @@
 
 @if (externalLogins.Length == 0)
 {
-    <div>
-        <p>
+    <FluentMessageBar Intent="MessageIntent.Info" AllowDismiss="false">
+        <p style="margin: 0;">
             There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
             about setting up this ASP.NET application to support logging in via external services</a>.
         </p>
-    </div>
+    </FluentMessageBar>
 }
 else
 {
-    <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
+    <form action="Account/PerformExternalLogin" method="post">
         <div>
             <AntiforgeryToken />
             <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-            <p>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                 @foreach (var provider in externalLogins)
                 {
-                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Outline"
+                                  Name="provider"
+                                  Value="@provider.Name"
+                                  Title=$"Log in using your {provider.DisplayName} account"
+                                  CustomStyle="width: 100%;">
+                        @provider.DisplayName
+                    </FluentButton>
                 }
-            </p>
+            </div>
         </div>
     </form>
 }

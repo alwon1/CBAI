@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using CBAI.Web.Data
+@using Microsoft.FluentUI.AspNetCore.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -15,27 +16,29 @@
 
 <h3>Delete Personal Data</h3>
 
-<div class="alert alert-warning" role="alert">
-    <p>
-        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-    </p>
-</div>
+<FluentMessageBar Intent="MessageIntent.Warning" AllowDismiss="false">
+    <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
+</FluentMessageBar>
 
-<div>
-    <EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
-        <DataAnnotationsValidator />
-        <ValidationSummary class="text-danger" role="alert" />
-        @if (requirePassword)
-        {
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Please enter your password." />
-                <label for="Input.Password" class="form-label">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
-            </div>
-        }
-        <button class="w-100 btn btn-lg btn-danger" type="submit">Delete data and close my account</button>
-    </EditForm>
-</div>
+<EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+            @if (requirePassword)
+            {
+                <div>
+                    <FluentLabel>Password</FluentLabel>
+                    <FluentTextField @bind-Value="Input.Password" Name="Input.Password" TextFieldType="TextFieldType.Password" AutoComplete="current-password" Placeholder="Please enter your password" AriaLabel="Password" Appearance="FluentInputAppearance.Filled" />
+                    <FluentValidationMessage For="() => Input.Password" />
+                </div>
+            }
+
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Delete data and close my account</FluentButton>
+        </FluentStack>
+    </FluentCard>
+</EditForm>
 
 @code {
     private string? message;

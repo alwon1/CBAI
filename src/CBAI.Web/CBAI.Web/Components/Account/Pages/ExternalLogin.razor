@@ -18,30 +18,42 @@
 
 <PageTitle>Register</PageTitle>
 
-<StatusMessage Message="@message" />
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
-<hr />
+<div style="max-width: 42rem; margin: 4rem auto; padding: 0 1rem;">
+    <section style="padding: 2rem; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 1rem; background: var(--neutral-layer-1, #fff);">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <h1 style="margin: 0;">Register</h1>
+            <h2 style="margin: 0;">Associate your @ProviderDisplayName account</h2>
 
-<div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
-</div>
+            <StatusMessage Message="@message" />
 
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="Input.Email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
-    </div>
+            <FluentMessageBar Intent="MessageIntent.Info" AllowDismiss="false">
+                You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
+                Please enter an email address for this site below and click Register to finish logging in.
+            </FluentMessageBar>
+
+            <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
+                <DataAnnotationsValidator />
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <FluentTextField @bind-Value="Input.Email"
+                                     Name="Input.Email"
+                                     Label="Email"
+                                     Placeholder="Please enter your email."
+                                     AutoComplete="email"
+                                     Required="true"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => Input.Email" />
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  CustomStyle="width: 100%;">
+                        Register
+                    </FluentButton>
+                </div>
+            </EditForm>
+        </div>
+    </section>
 </div>
 
 @code {
