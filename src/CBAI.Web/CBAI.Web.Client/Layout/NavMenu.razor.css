@@ -1,5 +1,14 @@
-::deep fluent-nav-menu {
+.nav-menu {
     height: 100%;
+}
+
+.nav-menu ::deep .fluent-nav-menu {
+    height: 100%;
+    color: #fff;
+    --neutral-fill-stealth-rest: transparent;
+    --neutral-fill-secondary-rest: rgba(255, 255, 255, 0.1);
+    --neutral-foreground-rest: #fff;
+    --accent-fill-rest: #60cdff;
 }
 
 form {

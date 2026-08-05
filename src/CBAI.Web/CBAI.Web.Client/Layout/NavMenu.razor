@@ -2,29 +2,31 @@
 
 @inject NavigationManager NavigationManager
 
-<FluentNavMenu Title="CBAI" Width="280" Collapsible="true">
-    <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
-    <FluentNavLink Href="counter">Counter</FluentNavLink>
-    <FluentNavLink Href="weather">Weather</FluentNavLink>
-    <FluentNavLink Href="auth">Auth Required</FluentNavLink>
+<div class="nav-menu">
+    <FluentNavMenu Title="CBAI" Width="280" Collapsible="true">
+        <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
+        <FluentNavLink Href="counter">Counter</FluentNavLink>
+        <FluentNavLink Href="weather">Weather</FluentNavLink>
+        <FluentNavLink Href="auth">Auth Required</FluentNavLink>
 
-    <AuthorizeView>
-        <Authorized>
-            <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                <FluentButton Id="components-logout-button" Type="ButtonType.Submit" Appearance="Appearance.Stealth">
-                    Logout
-                </FluentButton>
-            </form>
-        </Authorized>
-        <NotAuthorized>
-            <FluentNavLink Href="Account/Register">Register</FluentNavLink>
-            <FluentNavLink Href="Account/Login">Login</FluentNavLink>
-        </NotAuthorized>
-    </AuthorizeView>
-</FluentNavMenu>
+        <AuthorizeView>
+            <Authorized>
+                <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                    <FluentButton Id="components-logout-button" Type="ButtonType.Submit" Appearance="Appearance.Stealth">
+                        Logout
+                    </FluentButton>
+                </form>
+            </Authorized>
+            <NotAuthorized>
+                <FluentNavLink Href="Account/Register">Register</FluentNavLink>
+                <FluentNavLink Href="Account/Login">Login</FluentNavLink>
+            </NotAuthorized>
+        </AuthorizeView>
+    </FluentNavMenu>
+</div>
 
 @code {
     private string? currentUrl;
