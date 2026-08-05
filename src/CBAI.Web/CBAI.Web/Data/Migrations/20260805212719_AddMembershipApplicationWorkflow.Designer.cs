@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CBAI.Web.Data.Migrations
+namespace CBAI.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260805212719_AddMembershipApplicationWorkflow")]
