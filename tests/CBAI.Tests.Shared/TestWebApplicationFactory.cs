@@ -11,6 +11,7 @@ namespace CBAI.Tests.Shared;
 public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly EphemeralSqliteDatabase _database = new();
+    private readonly string? _originalDefaultConnectionString;
 
     public string ConnectionString => _database.ConnectionString;
 
@@ -21,6 +22,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         // observed by that early read. Setting the process environment variable ensures the
         // override is already present in configuration by the time WebApplication.CreateBuilder
         // runs inside the deferred host.
+        _originalDefaultConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _database.ConnectionString);
     }
 
