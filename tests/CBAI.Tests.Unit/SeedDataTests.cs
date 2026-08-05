@@ -82,6 +82,37 @@ public sealed class SeedDataTests
     }
 
     [TestMethod]
+    public async Task BogusAccounts_GenuineMembersDoNotReduceConfiguredCount()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+
+        await DemoDataSeeder.SeedAsync(services, new SeedDataOptions { Enabled = true, BogusUserCount = 0 });
+
+        var genuineMember = new ApplicationUser
+        {
+            UserName = "genuine@example.org",
+            Email = "genuine@example.org",
+            EmailConfirmed = true,
+        };
+        Assert.IsTrue((await userManager.CreateAsync(genuineMember, "Genuine123!")).Succeeded);
+        Assert.IsTrue((await userManager.AddToRoleAsync(genuineMember, Roles.Member)).Succeeded);
+
+        var options = new SeedDataOptions { Enabled = true, BogusUserCount = 3 };
+        await DemoDataSeeder.SeedAsync(services, options);
+
+        var generatedEmails = MemberProfileFaker.Generate(options.BogusUserCount, options.RandomSeed)
+            .Select(profile => profile.Email)
+            .ToArray();
+        var members = await userManager.GetUsersInRoleAsync(Roles.Member);
+
+        Assert.AreEqual(options.BogusUserCount + 2, members.Count, "Expected known, genuine, and all configured generated members.");
+        CollectionAssert.IsSubsetOf(generatedEmails, members.Select(user => user.Email).ToArray());
+    }
+
+    [TestMethod]
     public void BogusAccounts_AreDeterministic_ForFixedSeed()
     {
         var first = MemberProfileFaker.Generate(count: 5, randomSeed: 20260805);

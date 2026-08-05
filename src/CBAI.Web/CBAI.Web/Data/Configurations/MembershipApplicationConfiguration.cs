@@ -13,6 +13,7 @@ public sealed class MembershipApplicationConfiguration : IEntityTypeConfiguratio
         builder.Property(a => a.SponsorUserId).HasMaxLength(450);
         builder.Property(a => a.DecidedByUserId).HasMaxLength(450);
         builder.Property(a => a.Status).HasConversion<string>();
+        builder.Property(a => a.Version).IsConcurrencyToken();
         builder.Property(a => a.RequestedMembershipTypeName).IsRequired().HasMaxLength(100);
 
         builder.HasMany(a => a.AuditEntries)

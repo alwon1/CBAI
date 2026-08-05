@@ -20,6 +20,11 @@ public class MembershipApplication
 
     public MembershipApplicationStatus Status { get; set; } = MembershipApplicationStatus.Draft;
 
+    /// <summary>
+    /// Optimistic concurrency version incremented for every workflow transition.
+    /// </summary>
+    public int Version { get; set; }
+
     /// <summary>Notes recorded by the decider when approving or rejecting the application.</summary>
     public string? DecisionNotes { get; set; }
 

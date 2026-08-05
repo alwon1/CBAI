@@ -2,6 +2,7 @@ using CBAI.Web.Data;
 using CBAI.Web.Data.Seed;
 using CBAI.Web.Membership;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CBAI.Tests.Unit;
@@ -223,6 +224,97 @@ public sealed class MembershipApplicationServiceTests
 
         await Assert.ThrowsExactlyAsync<InvalidMembershipApplicationTransitionException>(
             () => service.DecideAsync(draft.Id, deciderId, approve: false));
+    }
+
+    [TestMethod]
+    [DataRow("member@example.com")]
+    [DataRow("sponsor@example.com")]
+    public async Task DecideAsync_WithUnauthorizedRole_ThrowsAndLeavesApplicationSubmitted(string deciderEmail)
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var sponsorId = await UserIdAsync(users, "sponsor@example.com");
+        var deciderId = await UserIdAsync(users, deciderEmail);
+
+        var draft = await service.CreateDraftAsync(applicantId);
+        var submitted = await service.SubmitAsync(draft.Id, sponsorId);
+
+        await Assert.ThrowsExactlyAsync<DecisionMakerUnauthorizedException>(
+            () => service.DecideAsync(draft.Id, deciderId, approve: true));
+
+        Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
+        Assert.IsNull(submitted.DecidedByUserId);
+        Assert.IsNull(submitted.DecidedAtUtc);
+        Assert.AreEqual(2, (await service.GetAuditTrailAsync(draft.Id)).Count);
+    }
+
+    [TestMethod]
+    public async Task DecideAsync_WithNonexistentUser_ThrowsAndLeavesApplicationSubmitted()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var sponsorId = await UserIdAsync(users, "sponsor@example.com");
+
+        var draft = await service.CreateDraftAsync(applicantId);
+        var submitted = await service.SubmitAsync(draft.Id, sponsorId);
+
+        await Assert.ThrowsExactlyAsync<DecisionMakerUnauthorizedException>(
+            () => service.DecideAsync(draft.Id, Guid.NewGuid().ToString(), approve: false));
+
+        Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
+        Assert.IsNull(submitted.DecidedByUserId);
+        Assert.IsNull(submitted.DecidedAtUtc);
+        Assert.AreEqual(2, (await service.GetAuditTrailAsync(draft.Id)).Count);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentTransitions_SecondStaleUpdateFailsWithoutAppendingAudit()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var setupScope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(setupScope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var draft = await service.CreateDraftAsync(applicantId);
+
+        using var firstScope = factory.Services.CreateScope();
+        using var secondScope = factory.Services.CreateScope();
+        var firstDb = firstScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var secondDb = secondScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var firstCopy = await firstDb.MembershipApplications.SingleAsync(application => application.Id == draft.Id);
+        var staleCopy = await secondDb.MembershipApplications.SingleAsync(application => application.Id == draft.Id);
+
+        ApplySubmission(firstCopy, "first-sponsor");
+        ApplySubmission(staleCopy, "stale-sponsor");
+        await firstDb.SaveChangesAsync();
+
+        await Assert.ThrowsExactlyAsync<DbUpdateConcurrencyException>(() => secondDb.SaveChangesAsync());
+
+        secondDb.ChangeTracker.Clear();
+        var persisted = await secondDb.MembershipApplications.SingleAsync(application => application.Id == draft.Id);
+        var submittedAudits = await secondDb.MembershipApplicationAuditEntries
+            .CountAsync(entry => entry.MembershipApplicationId == draft.Id
+                && entry.Action == MembershipApplicationAuditAction.Submitted);
+        Assert.AreEqual("first-sponsor", persisted.SponsorUserId);
+        Assert.AreEqual(1, submittedAudits, "The failed stale transition must not append a second audit entry.");
+
+        static void ApplySubmission(MembershipApplication application, string sponsorId)
+        {
+            application.Status = MembershipApplicationStatus.Submitted;
+            application.SponsorUserId = sponsorId;
+            application.SubmittedAtUtc = DateTimeOffset.UtcNow;
+            application.Version++;
+            application.AuditEntries.Add(new MembershipApplicationAuditEntry
+            {
+                MembershipApplicationId = application.Id,
+                Action = MembershipApplicationAuditAction.Submitted,
+                PerformedByUserId = application.ApplicantUserId,
+                TimestampUtc = application.SubmittedAtUtc.Value,
+            });
+        }
     }
 
     [TestMethod]

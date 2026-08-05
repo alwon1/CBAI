@@ -52,6 +52,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
 
         application.SponsorUserId = sponsorUserId;
         application.Status = MembershipApplicationStatus.Submitted;
+        application.Version++;
         application.SubmittedAtUtc = DateTimeOffset.UtcNow;
         application.AuditEntries.Add(new MembershipApplicationAuditEntry
         {
@@ -61,7 +62,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             TimestampUtc = application.SubmittedAtUtc.Value,
         });
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveTransitionAsync(application, MembershipApplicationStatus.Draft, cancellationToken);
         return application;
     }
 
@@ -80,7 +81,24 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             throw new InvalidMembershipApplicationTransitionException($"Application '{applicationId}' cannot be decided from {application.Status}.");
         }
 
+        var decisionMaker = string.IsNullOrWhiteSpace(decidedByUserId)
+            ? null
+            : await userManager.FindByIdAsync(decidedByUserId);
+        if (decisionMaker is null)
+        {
+            throw new DecisionMakerUnauthorizedException($"User '{decidedByUserId}' is not authorized to decide membership applications.");
+        }
+
+        var decisionMakerRoles = await userManager.GetRolesAsync(decisionMaker);
+        var canDecide = decisionMakerRoles.Contains(Roles.Staff, StringComparer.OrdinalIgnoreCase)
+            || decisionMakerRoles.Contains(Roles.BoardMember, StringComparer.OrdinalIgnoreCase);
+        if (!canDecide)
+        {
+            throw new DecisionMakerUnauthorizedException($"User '{decidedByUserId}' is not authorized to decide membership applications.");
+        }
+
         application.Status = approve ? MembershipApplicationStatus.Approved : MembershipApplicationStatus.Rejected;
+        application.Version++;
         application.DecidedByUserId = decidedByUserId;
         application.DecisionNotes = notes;
         application.DecidedAtUtc = DateTimeOffset.UtcNow;
@@ -93,7 +111,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             Details = notes,
         });
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveTransitionAsync(application, MembershipApplicationStatus.Submitted, cancellationToken);
         return application;
     }
 
@@ -128,5 +146,22 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             .OrderBy(e => e.TimestampUtc)
             .ThenBy(e => e.Id)
             .ToList();
+    }
+
+    private async Task SaveTransitionAsync(
+        MembershipApplication application,
+        MembershipApplicationStatus expectedStatus,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            throw new InvalidMembershipApplicationTransitionException(
+                $"Application '{application.Id}' is no longer {expectedStatus}; another request completed the transition first.");
+        }
     }
 }

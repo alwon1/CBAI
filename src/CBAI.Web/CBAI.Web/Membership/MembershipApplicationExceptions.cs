@@ -12,3 +12,9 @@ public class InvalidMembershipApplicationTransitionException(string message) : I
 /// <see cref="IMembershipApplicationService.IsSponsorEligibleAsync"/>.
 /// </summary>
 public class SponsorIneligibleException(string message) : InvalidOperationException(message);
+
+/// <summary>
+/// Thrown when a decision is attributed to an account that does not exist or is not authorized
+/// to decide membership applications.
+/// </summary>
+public class DecisionMakerUnauthorizedException(string message) : UnauthorizedAccessException(message);

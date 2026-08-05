@@ -20,8 +20,10 @@ public interface IMembershipApplicationService
 
     /// <summary>
     /// Records a staff/board decision, transitioning a Submitted application to Approved or
-    /// Rejected. Throws <see cref="InvalidMembershipApplicationTransitionException"/> if the
-    /// application is not currently Submitted (e.g. still a Draft, or already decided).
+    /// Rejected. The decision maker must be an existing user in the Staff or BoardMember role.
+    /// Throws <see cref="DecisionMakerUnauthorizedException"/> if that authorization check fails,
+    /// or <see cref="InvalidMembershipApplicationTransitionException"/> if the application is not
+    /// currently Submitted (e.g. still a Draft, or already decided).
     /// </summary>
     Task<MembershipApplication> DecideAsync(Guid applicationId, string decidedByUserId, bool approve, string? notes = null, CancellationToken cancellationToken = default);
 

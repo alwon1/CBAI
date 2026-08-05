@@ -59,16 +59,9 @@ public static class DemoDataSeeder
             return;
         }
 
-        var knownMemberEmail = KnownAccounts.All.Single(a => a.Role == Roles.Member).Email;
-        var existingMembers = await userManager.GetUsersInRoleAsync(Roles.Member);
-        var existingBogusCount = existingMembers.Count(u => !string.Equals(u.Email, knownMemberEmail, StringComparison.OrdinalIgnoreCase));
-
-        if (existingBogusCount >= options.BogusUserCount)
-        {
-            // Already topped up (or beyond) the configured count — nothing to do.
-            return;
-        }
-
+        // The deterministic faker output is the identity of generated accounts. Do not infer
+        // that every Member-role account except the known demo member was generated: a reused
+        // database can contain genuine members, and they must not reduce the configured count.
         var profiles = MemberProfileFaker.Generate(options.BogusUserCount, options.RandomSeed);
 
         foreach (var profile in profiles)
