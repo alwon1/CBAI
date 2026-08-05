@@ -7,12 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CBAI.Tests.Unit;
 
 /// <summary>
-/// Exercises the (not-yet-implemented) membership application workflow described in the
+/// Exercises the membership application workflow described in the
 /// "Membership Application Workflow" design note: draft creation, submission gated by sponsor
-/// eligibility, staff/board decisions, and the resulting audit trail. These tests are expected
-/// to fail against the current <see cref="MembershipApplicationService"/> stub — every member
-/// throws <see cref="NotImplementedException"/> — they establish the contract a later slice
-/// must satisfy.
+/// eligibility, staff/board decisions, and the resulting audit trail.
 /// </summary>
 [TestClass]
 public sealed class MembershipApplicationServiceTests
