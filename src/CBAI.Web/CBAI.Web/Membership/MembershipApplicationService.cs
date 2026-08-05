@@ -11,13 +11,11 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
     {
         var application = new MembershipApplication
         {
+            Id = Guid.NewGuid(),
             ApplicantUserId = applicantUserId,
             RequestedMembershipTypeName = "Standard",
             CreatedAtUtc = DateTimeOffset.UtcNow,
         };
-
-        db.MembershipApplications.Add(application);
-        await db.SaveChangesAsync(cancellationToken);
 
         application.AuditEntries.Add(new MembershipApplicationAuditEntry
         {
@@ -27,6 +25,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             TimestampUtc = application.CreatedAtUtc,
         });
 
+        db.MembershipApplications.Add(application);
         await db.SaveChangesAsync(cancellationToken);
         return application;
     }

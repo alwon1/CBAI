@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CBAI.Web.Data.Migrations
+namespace CBAI.Web.Migrations
 {
     /// <inheritdoc />
     public partial class AddMembershipApplicationWorkflow : Migration
