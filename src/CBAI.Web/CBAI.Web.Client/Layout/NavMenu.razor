@@ -1,12 +1,10 @@
-﻿@implements IDisposable
+@implements IDisposable
 
 @inject NavigationManager NavigationManager
 
 <div class="nav-menu">
     <FluentNavMenu Title="CBAI" Width="280" Collapsible="true">
         <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
-        <FluentNavLink Href="counter">Counter</FluentNavLink>
-        <FluentNavLink Href="weather">Weather</FluentNavLink>
         <FluentNavLink Href="auth">Auth Required</FluentNavLink>
 
         <AuthorizeView>
