@@ -13,6 +13,8 @@ public class MembershipApplication
     /// <summary>Identity user id of the prospective member.</summary>
     public required string ApplicantUserId { get; set; }
 
+    public required string RequestedMembershipTypeName { get; set; }
+
     /// <summary>Identity user id of the sponsor who vouched for the applicant at submission time.</summary>
     public string? SponsorUserId { get; set; }
 
@@ -29,4 +31,6 @@ public class MembershipApplication
     public DateTimeOffset? SubmittedAtUtc { get; set; }
 
     public DateTimeOffset? DecidedAtUtc { get; set; }
+
+    public List<MembershipApplicationAuditEntry> AuditEntries { get; set; } = [];
 }

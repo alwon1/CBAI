@@ -1,30 +1,133 @@
 using CBAI.Web.Data;
+using CBAI.Web.Data.Seed;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace CBAI.Web.Membership;
 
-/// <summary>
-/// EF Core + Identity-backed implementation of <see cref="IMembershipApplicationService"/>.
-/// STUB: every member intentionally throws <see cref="NotImplementedException"/>. This class
-/// exists only so the "Membership Application Workflow" test suite (see
-/// MembershipApplicationServiceTests) compiles ahead of the real implementation — the tests
-/// describe the intended draft/submission/decision/audit-trail contract and are expected to
-/// fail (red) until this stub is filled in with real persistence, eligibility, and audit logic.
-/// </summary>
 public sealed class MembershipApplicationService(ApplicationDbContext db, UserManager<ApplicationUser> userManager) : IMembershipApplicationService
 {
-    public Task<MembershipApplication> CreateDraftAsync(string applicantUserId, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    public async Task<MembershipApplication> CreateDraftAsync(string applicantUserId, CancellationToken cancellationToken = default)
+    {
+        var application = new MembershipApplication
+        {
+            ApplicantUserId = applicantUserId,
+            RequestedMembershipTypeName = "Standard",
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+        };
 
-    public Task<MembershipApplication> SubmitAsync(Guid applicationId, string sponsorUserId, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+        db.MembershipApplications.Add(application);
+        await db.SaveChangesAsync(cancellationToken);
 
-    public Task<MembershipApplication> DecideAsync(Guid applicationId, string decidedByUserId, bool approve, string? notes = null, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+        application.AuditEntries.Add(new MembershipApplicationAuditEntry
+        {
+            MembershipApplicationId = application.Id,
+            Action = MembershipApplicationAuditAction.Created,
+            PerformedByUserId = applicantUserId,
+            TimestampUtc = application.CreatedAtUtc,
+        });
 
-    public Task<bool> IsSponsorEligibleAsync(string sponsorUserId, string applicantUserId, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+        await db.SaveChangesAsync(cancellationToken);
+        return application;
+    }
 
-    public Task<IReadOnlyList<MembershipApplicationAuditEntry>> GetAuditTrailAsync(Guid applicationId, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    public async Task<MembershipApplication> SubmitAsync(Guid applicationId, string sponsorUserId, CancellationToken cancellationToken = default)
+    {
+        var application = await db.MembershipApplications
+            .SingleOrDefaultAsync(a => a.Id == applicationId, cancellationToken);
+
+        if (application is null)
+        {
+            throw new InvalidOperationException($"Application '{applicationId}' was not found.");
+        }
+
+        if (application.Status != MembershipApplicationStatus.Draft)
+        {
+            throw new InvalidMembershipApplicationTransitionException($"Application '{applicationId}' cannot be submitted from {application.Status}.");
+        }
+
+        if (!await IsSponsorEligibleAsync(sponsorUserId, application.ApplicantUserId, cancellationToken))
+        {
+            throw new SponsorIneligibleException($"Sponsor '{sponsorUserId}' is not eligible to sponsor '{application.ApplicantUserId}'.");
+        }
+
+        application.SponsorUserId = sponsorUserId;
+        application.Status = MembershipApplicationStatus.Submitted;
+        application.SubmittedAtUtc = DateTimeOffset.UtcNow;
+        application.AuditEntries.Add(new MembershipApplicationAuditEntry
+        {
+            MembershipApplicationId = application.Id,
+            Action = MembershipApplicationAuditAction.Submitted,
+            PerformedByUserId = application.ApplicantUserId,
+            TimestampUtc = application.SubmittedAtUtc.Value,
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return application;
+    }
+
+    public async Task<MembershipApplication> DecideAsync(Guid applicationId, string decidedByUserId, bool approve, string? notes = null, CancellationToken cancellationToken = default)
+    {
+        var application = await db.MembershipApplications
+            .SingleOrDefaultAsync(a => a.Id == applicationId, cancellationToken);
+
+        if (application is null)
+        {
+            throw new InvalidOperationException($"Application '{applicationId}' was not found.");
+        }
+
+        if (application.Status != MembershipApplicationStatus.Submitted)
+        {
+            throw new InvalidMembershipApplicationTransitionException($"Application '{applicationId}' cannot be decided from {application.Status}.");
+        }
+
+        application.Status = approve ? MembershipApplicationStatus.Approved : MembershipApplicationStatus.Rejected;
+        application.DecidedByUserId = decidedByUserId;
+        application.DecisionNotes = notes;
+        application.DecidedAtUtc = DateTimeOffset.UtcNow;
+        application.AuditEntries.Add(new MembershipApplicationAuditEntry
+        {
+            MembershipApplicationId = application.Id,
+            Action = approve ? MembershipApplicationAuditAction.Approved : MembershipApplicationAuditAction.Rejected,
+            PerformedByUserId = decidedByUserId,
+            TimestampUtc = application.DecidedAtUtc.Value,
+            Details = notes,
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return application;
+    }
+
+    public async Task<bool> IsSponsorEligibleAsync(string sponsorUserId, string applicantUserId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sponsorUserId) || sponsorUserId == applicantUserId)
+        {
+            return false;
+        }
+
+        var sponsor = await userManager.FindByIdAsync(sponsorUserId);
+        if (sponsor is null)
+        {
+            return false;
+        }
+
+        var roles = await userManager.GetRolesAsync(sponsor);
+        var isEligibleRole = roles.Contains(Roles.Sponsor, StringComparer.OrdinalIgnoreCase) || roles.Contains(Roles.BoardMember, StringComparer.OrdinalIgnoreCase);
+        return isEligibleRole;
+    }
+
+    public async Task<IReadOnlyList<MembershipApplicationAuditEntry>> GetAuditTrailAsync(Guid applicationId, CancellationToken cancellationToken = default)
+    {
+        // Ordering by DateTimeOffset isn't translatable to SQL by the SQLite provider, so the
+        // (per-application, and therefore small) result set is materialized first and then
+        // ordered client-side.
+        var entries = await db.MembershipApplicationAuditEntries
+            .Where(e => e.MembershipApplicationId == applicationId)
+            .ToListAsync(cancellationToken);
+
+        return entries
+            .OrderBy(e => e.TimestampUtc)
+            .ThenBy(e => e.Id)
+            .ToList();
+    }
 }
