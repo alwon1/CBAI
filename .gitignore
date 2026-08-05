@@ -274,6 +274,9 @@ ServiceFabricBackup/
 *.ldf
 *.ndf
 
+# Local SQLite data for the web app
+src/CBAI.Web/CBAI.Web/Data/*.db*
+
 # Business Intelligence projects
 *.rdl.data
 *.bim.layout
