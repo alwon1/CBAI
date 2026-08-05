@@ -17,8 +17,8 @@ body {
 
 .sidebar {
     flex: 0 0 17.5rem;
-    background: linear-gradient(180deg, #0f5b94 0%, #0b3f74 55%, #3a0647 100%);
-    color: #fff;
+    background: #fff;
+    border-right: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 main {
@@ -74,6 +74,8 @@ main {
     .sidebar {
         flex-basis: auto;
         width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     }
 
     .top-row {
