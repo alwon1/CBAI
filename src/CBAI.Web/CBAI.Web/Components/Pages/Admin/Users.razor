@@ -31,7 +31,7 @@
 
 <div style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 1rem;">
     <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between;">
-        <FluentSearch @bind-Value="searchTerm" @oninput="HandleSearch" Placeholder="Search by email..." />
+        <FluentSearch @bind-Value="searchTerm" @oninput="HandleSearch" Placeholder="Search by email..." AriaLabel="Search by email" />
         <FluentButton Appearance="Appearance.Accent" OnClick="ShowAddUserDialog">Add User</FluentButton>
     </div>
 
