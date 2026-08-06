@@ -107,7 +107,7 @@ namespace CBAI.Web.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Members");
+                    b.ToTable("Members", (string)null);
                 });
 
             modelBuilder.Entity("CBAI.Web.Membership.MembershipApplication", b =>
@@ -156,7 +156,7 @@ namespace CBAI.Web.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MembershipApplications");
+                    b.ToTable("MembershipApplications", (string)null);
                 });
 
             modelBuilder.Entity("CBAI.Web.Membership.MembershipApplicationAuditEntry", b =>
@@ -187,7 +187,7 @@ namespace CBAI.Web.Migrations
 
                     b.HasIndex("MembershipApplicationId");
 
-                    b.ToTable("MembershipApplicationAuditEntries");
+                    b.ToTable("MembershipApplicationAuditEntries", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -412,7 +412,7 @@ namespace CBAI.Web.Migrations
 
                             b1.HasKey("IdentityUserPasskeyCredentialId");
 
-                            b1.ToTable("AspNetUserPasskeys");
+                            b1.ToTable("AspNetUserPasskeys", (string)null);
 
                             b1
                                 .ToJson("Data")

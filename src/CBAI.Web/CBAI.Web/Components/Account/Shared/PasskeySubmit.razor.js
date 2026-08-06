@@ -42,6 +42,41 @@ async function requestCredential(email, mediation, headers, signal) {
 customElements.define('passkey-submit', class extends HTMLElement {
     static formAssociated = true;
 
+    convertToBase64(o) {
+      if (!o) {
+        return undefined;
+      }
+
+      // Normalize Array to Uint8Array
+      if (Array.isArray(o)) {
+        o = Uint8Array.from(o);
+      }
+
+      // Normalize ArrayBuffer to Uint8Array
+      if (o instanceof ArrayBuffer) {
+        o = new Uint8Array(o);
+      }
+
+      // Convert Uint8Array to base64
+      if (o instanceof Uint8Array) {
+        let str = '';
+        const chunkSize = 0x2000;
+        for (let i = 0; i < o.byteLength; i += chunkSize) {
+          str += String.fromCharCode(...o.subarray(i, i + chunkSize));
+        }
+        o = window.btoa(str);
+      }
+
+      if (typeof o !== 'string') {
+        throw new Error("Could not convert to base64 string");
+      }
+
+      // Convert base64 to base64url
+      o = o.replace(/\+/g, "-").replace(/\//g, "_").replace(/=*$/g, "");
+
+      return o;
+    }
+
     connectedCallback() {
         this.internals = this.attachInternals();
         this.attrs = {
@@ -93,7 +128,24 @@ customElements.define('passkey-submit', class extends HTMLElement {
         const formData = new FormData();
         try {
             const credential = await this.obtainCredential(useConditionalMediation, signal);
-            const credentialJson = JSON.stringify(credential);
+            const credentialJson = JSON.stringify({
+              authenticatorAttachment: credential.authenticatorAttachment,
+              clientExtensionResults: credential.getClientExtensionResults(),
+              id: credential.id,
+              rawId: this.convertToBase64(credential.rawId),
+              response: {
+                attestationObject: this.convertToBase64(credential.response.attestationObject),
+                authenticatorData: this.convertToBase64(credential.response.authenticatorData ??
+                  credential.response.getAuthenticatorData?.() ?? undefined),
+                clientDataJSON: this.convertToBase64(credential.response.clientDataJSON),
+                publicKey: this.convertToBase64(credential.response.getPublicKey?.() ?? undefined),
+                publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm?.() ?? undefined,
+                transports: credential.response.getTransports?.() ?? undefined,
+                signature: this.convertToBase64(credential.response.signature),
+                userHandle: this.convertToBase64(credential.response.userHandle),
+              },
+              type: credential.type,
+            });
             formData.append(`${this.attrs.name}.CredentialJson`, credentialJson);
         } catch (error) {
             if (error.name === 'AbortError') {
