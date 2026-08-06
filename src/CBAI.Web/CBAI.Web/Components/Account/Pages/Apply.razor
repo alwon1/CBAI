@@ -3,13 +3,17 @@
 @rendermode InteractiveServer
 
 @using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
 @using CBAI.Web.Data
 @using CBAI.Web.Membership
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject IMembershipApplicationService Applications
+@inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager Navigation
 
 <PageTitle>Apply for membership</PageTitle>
@@ -190,14 +194,20 @@
                 return;
             }
 
+            MembershipApplication? draft = null;
             try
             {
-                var draft = await Applications.CreateDraftAsync(user.Id);
+                draft = await Applications.CreateDraftAsync(user.Id);
                 draft.RequestedMembershipTypeName = membership.MembershipType;
                 await Applications.SubmitAsync(draft.Id, sponsor.Id);
             }
             catch (Exception ex) when (ex is SponsorIneligibleException or InvalidOperationException)
             {
+                if (draft is not null)
+                {
+                    await Applications.DeleteDraftAsync(draft.Id, user.Id);
+                }
+
                 await UserManager.DeleteAsync(user);
                 errors.Add(ex is SponsorIneligibleException
                     ? "That account is not eligible to sponsor an application."
@@ -205,8 +215,21 @@
                 return;
             }
 
+            var userId = await UserManager.GetUserIdAsync(user);
+            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = Navigation.GetUriWithQueryParameters(
+                Navigation.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+                new Dictionary<string, object?>
+                {
+                    ["userId"] = userId,
+                    ["code"] = code,
+                    ["returnUrl"] = "membership/application",
+                });
+            await EmailSender.SendConfirmationLinkAsync(user, account.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
             Navigation.NavigateTo(
-                $"Account/RegisterConfirmation?email={Uri.EscapeDataString(account.Email)}",
+                $"Account/RegisterConfirmation?email={Uri.EscapeDataString(account.Email)}&returnUrl=membership/application",
                 forceLoad: true);
         }
         finally

@@ -3,6 +3,7 @@ namespace CBAI.Web.Membership;
 public interface IMembershipApplicationService
 {
     Task<MembershipApplication> CreateDraftAsync(string applicantUserId, CancellationToken cancellationToken = default);
+    Task DeleteDraftAsync(Guid applicationId, string applicantUserId, CancellationToken cancellationToken = default);
     Task<MembershipApplication> SubmitAsync(Guid applicationId, string sponsorUserId, CancellationToken cancellationToken = default);
     Task<MembershipApplication> ConfirmSponsorshipAsync(Guid applicationId, string sponsorUserId, CancellationToken cancellationToken = default);
     Task<MembershipApplication> DeclineSponsorshipAsync(Guid applicationId, string sponsorUserId, string? notes = null, CancellationToken cancellationToken = default);

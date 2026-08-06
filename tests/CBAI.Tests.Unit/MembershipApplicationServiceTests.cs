@@ -58,6 +58,37 @@ public sealed class MembershipApplicationServiceTests
     }
 
     [TestMethod]
+    public async Task DeleteDraftAsync_RemovesDraftAndItsAuditEntry()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var draft = await service.CreateDraftAsync(applicantId);
+
+        await service.DeleteDraftAsync(draft.Id, applicantId);
+
+        Assert.IsEmpty(await service.GetForApplicantAsync(applicantId));
+        Assert.IsEmpty(await service.GetAuditTrailAsync(draft.Id));
+    }
+
+    [TestMethod]
+    public async Task DeleteDraftAsync_DoesNotAllowAnotherApplicantToDeleteDraft()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var anotherUserId = await UserIdAsync(users, "staff@example.com");
+        var draft = await service.CreateDraftAsync(applicantId);
+
+        await Assert.ThrowsExactlyAsync<InvalidMembershipApplicationTransitionException>(
+            () => service.DeleteDraftAsync(draft.Id, anotherUserId));
+
+        Assert.HasCount(1, await service.GetForApplicantAsync(applicantId));
+    }
+
+    [TestMethod]
     public async Task SubmitAsync_WithSponsorInSponsorRole_TransitionsToPendingSponsor_AndAppendsAudit()
     {
         using var factory = new TestWebApplicationFactory();

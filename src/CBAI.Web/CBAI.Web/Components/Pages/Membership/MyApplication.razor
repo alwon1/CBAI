@@ -1,0 +1,137 @@
+@page "/membership/application"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.FluentUI.AspNetCore.Components
+@using CBAI.Web.Data
+@using CBAI.Web.Membership
+@inject IMembershipApplicationService Applications
+@inject UserManager<ApplicationUser> Users
+@inject AuthenticationStateProvider AuthenticationState
+
+<PageTitle>My membership application</PageTitle>
+
+<div class="page-heading">
+    <p class="eyebrow">Membership</p>
+    <h1>My application</h1>
+    <p>Review your application status and respond if a sponsor asks you to choose someone else.</p>
+</div>
+
+@if (message is not null)
+{
+    <FluentMessageBar Intent="MessageIntent.Success" AllowDismiss="false">@message</FluentMessageBar>
+}
+@if (error is not null)
+{
+    <FluentMessageBar Intent="MessageIntent.Error" AllowDismiss="false">@error</FluentMessageBar>
+}
+
+@if (application is null)
+{
+    <div class="empty-state"><h2>No application found</h2><p><a href="apply">Start a membership application</a>.</p></div>
+}
+else
+{
+    <FluentCard Class="application-summary">
+        <h2>@application.RequestedMembershipTypeName membership</h2>
+        <dl>
+            <dt>Status</dt>
+            <dd>@StatusLabel(application.Status)</dd>
+            <dt>Created</dt>
+            <dd>@application.CreatedAtUtc.ToString("d MMM yyyy")</dd>
+        </dl>
+
+        @if (application.Status == MembershipApplicationStatus.Draft)
+        {
+            <EditForm Model="sponsor" OnValidSubmit="ResubmitAsync">
+                <DataAnnotationsValidator />
+                <div class="wizard-step-content">
+                    <p>Your previous sponsor declined. Enter another eligible sponsor's email to send a new request.</p>
+                    <FluentTextField @bind-Value="sponsor.Email"
+                                     Label="New sponsor email"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     Required="true"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => sponsor.Email" />
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Disabled="submitting">
+                        Send sponsorship request
+                    </FluentButton>
+                </div>
+            </EditForm>
+        }
+    </FluentCard>
+}
+
+@code {
+    private MembershipApplication? application;
+    private string? userId;
+    private string? message;
+    private string? error;
+    private bool submitting;
+    private readonly SponsorModel sponsor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var principal = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        userId = Users.GetUserId(principal);
+        if (userId is not null)
+        {
+            application = (await Applications.GetForApplicantAsync(userId)).FirstOrDefault();
+        }
+    }
+
+    private async Task ResubmitAsync()
+    {
+        if (submitting || application is null || userId is null)
+        {
+            return;
+        }
+
+        submitting = true;
+        error = null;
+        message = null;
+        try
+        {
+            var selectedSponsor = await Users.FindByEmailAsync(sponsor.Email);
+            if (selectedSponsor is null || !await Applications.IsSponsorEligibleAsync(selectedSponsor.Id, userId))
+            {
+                error = "We could not find an eligible sponsor with that email address.";
+                return;
+            }
+
+            application = await Applications.SubmitAsync(application.Id, selectedSponsor.Id);
+            message = "Your sponsorship request has been sent.";
+        }
+        catch (SponsorIneligibleException)
+        {
+            error = "That account is no longer eligible to sponsor an application.";
+        }
+        catch (InvalidMembershipApplicationTransitionException)
+        {
+            error = "Your application changed while this request was being sent. Refresh the page and try again.";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private static string StatusLabel(MembershipApplicationStatus status) => status switch
+    {
+        MembershipApplicationStatus.PendingSponsor => "Waiting for sponsor",
+        MembershipApplicationStatus.Submitted => "Awaiting committee review",
+        MembershipApplicationStatus.Waitlisted => "Waitlisted",
+        MembershipApplicationStatus.Approved => "Approved",
+        MembershipApplicationStatus.Rejected => "Not approved",
+        _ => "Sponsor needed",
+    };
+
+    private sealed class SponsorModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+    }
+}

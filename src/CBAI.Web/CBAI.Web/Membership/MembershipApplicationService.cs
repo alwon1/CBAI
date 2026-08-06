@@ -30,6 +30,20 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
         return application;
     }
 
+    public async Task DeleteDraftAsync(Guid applicationId, string applicantUserId, CancellationToken cancellationToken = default)
+    {
+        var application = await db.MembershipApplications
+            .SingleOrDefaultAsync(a => a.Id == applicationId && a.ApplicantUserId == applicantUserId, cancellationToken);
+
+        if (application is null || application.Status != MembershipApplicationStatus.Draft)
+        {
+            throw new InvalidMembershipApplicationTransitionException($"Draft application '{applicationId}' cannot be deleted by this applicant.");
+        }
+
+        db.MembershipApplications.Remove(application);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<MembershipApplication> SubmitAsync(Guid applicationId, string sponsorUserId, CancellationToken cancellationToken = default)
     {
         var application = await db.MembershipApplications
@@ -178,13 +192,16 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
     }
 
     public async Task<IReadOnlyList<MembershipApplication>> GetForApplicantAsync(string applicantUserId, CancellationToken cancellationToken = default) =>
-        await db.MembershipApplications.Where(a => a.ApplicantUserId == applicantUserId).OrderByDescending(a => a.CreatedAtUtc).ToListAsync(cancellationToken);
+        (await db.MembershipApplications.Where(a => a.ApplicantUserId == applicantUserId).ToListAsync(cancellationToken))
+            .OrderByDescending(a => a.CreatedAtUtc).ToList();
 
     public async Task<IReadOnlyList<MembershipApplication>> GetPendingForSponsorAsync(string sponsorUserId, CancellationToken cancellationToken = default) =>
-        await db.MembershipApplications.Where(a => a.SponsorUserId == sponsorUserId && a.Status == MembershipApplicationStatus.PendingSponsor).OrderBy(a => a.CreatedAtUtc).ToListAsync(cancellationToken);
+        (await db.MembershipApplications.Where(a => a.SponsorUserId == sponsorUserId && a.Status == MembershipApplicationStatus.PendingSponsor).ToListAsync(cancellationToken))
+            .OrderBy(a => a.CreatedAtUtc).ToList();
 
     public async Task<IReadOnlyList<MembershipApplication>> GetReviewQueueAsync(CancellationToken cancellationToken = default) =>
-        await db.MembershipApplications.Where(a => a.Status == MembershipApplicationStatus.Submitted || a.Status == MembershipApplicationStatus.Waitlisted || a.Status == MembershipApplicationStatus.Rejected).OrderBy(a => a.CreatedAtUtc).ToListAsync(cancellationToken);
+        (await db.MembershipApplications.Where(a => a.Status == MembershipApplicationStatus.Submitted || a.Status == MembershipApplicationStatus.Waitlisted || a.Status == MembershipApplicationStatus.Rejected).ToListAsync(cancellationToken))
+            .OrderBy(a => a.CreatedAtUtc).ToList();
 
     private async Task<MembershipApplication> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await db.MembershipApplications.SingleOrDefaultAsync(a => a.Id == id, cancellationToken)
