@@ -1,0 +1,318 @@
+@page "/admin/users"
+@using CBAI.Web.Data
+@using CBAI.Web.Data.Seed
+@using CBAI.Web.Membership
+@using CBAI.Web.Components.Pages.Admin.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.FluentUI.AspNetCore.Components
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+
+@attribute [Authorize(Roles = Roles.Administrator)]
+@rendermode InteractiveServer
+
+<PageTitle>Manage Users</PageTitle>
+
+<h1>Manage Users</h1>
+
+<p>Admin panel for managing users and members.</p>
+
+<div style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+    <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between;">
+        <FluentSearch @bind-Value="searchTerm" @oninput="HandleSearch" Placeholder="Search by email..." />
+        <FluentButton Appearance="Appearance.Accent" OnClick="ShowAddUserDialog">Add User</FluentButton>
+    </div>
+
+    @if (selectedUsers.Any())
+    {
+        <div style="display: flex; gap: 1rem; align-items: center; padding: 1rem; background: var(--neutral-layer-2); border-radius: calc(var(--control-corner-radius) * 1px);">
+            <span>@selectedUsers.Count() selected</span>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="EnableSelectedAsync">Enable Selected</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="DisableSelectedAsync">Disable Selected</FluentButton>
+        </div>
+    }
+</div>
+
+@if (usersQueryable == null)
+{
+    <FluentProgressRing />
+}
+else
+{
+    <FluentDataGrid Items="@filteredUsers" TGridItem="AdminUserViewModel" Pagination="@pagination"
+                    SelectMode="DataGridSelectMode.Multiple"
+                    @bind-SelectedItems="selectedUsers">
+        <SelectColumn TGridItem="AdminUserViewModel" SelectMode="DataGridSelectMode.Multiple" Property="@(c => c.Id != null)" />
+        <PropertyColumn Property="@(c => c.Email)" Sortable="true" />
+        <PropertyColumn Property="@(c => c.RolesDisplay)" Title="Roles" />
+
+        <TemplateColumn Title="Account Status">
+            @if (context.IsEnabled)
+            {
+                <FluentBadge Appearance="Appearance.Accent">Enabled</FluentBadge>
+            }
+            else
+            {
+                <FluentBadge Appearance="Appearance.Neutral">Disabled</FluentBadge>
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Member Status">
+            @if (context.IsMember)
+            {
+                <FluentBadge Appearance="Appearance.Accent">@context.MemberStatus</FluentBadge>
+            }
+            else
+            {
+                <FluentBadge Appearance="Appearance.Lightweight">Not a Member</FluentBadge>
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Actions">
+            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ShowSetPasswordDialog(context))">Set Password</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => SendResetLinkAsync(context))">Reset Link</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => DeleteAccountAsync(context))" Style="color: red;">Delete</FluentButton>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <FluentPaginator State="@pagination" />
+}
+
+<FluentDialog @bind-Visible="isSetPasswordDialogOpen" Modal="true">
+    <div style="padding: 1rem; width: 300px;">
+        <h3>Set Password for @selectedUserForAction?.Email</h3>
+        <FluentTextField @bind-Value="newPassword" Label="New Password" TextFieldType="TextFieldType.Password" Style="width: 100%; margin-bottom: 1rem;" />
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="() => isSetPasswordDialogOpen = false">Cancel</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="SetPasswordAsync">Save</FluentButton>
+        </div>
+    </div>
+</FluentDialog>
+
+<FluentDialog @bind-Visible="isAddUserDialogOpen" Modal="true">
+    <div style="padding: 1rem; width: 400px; display: flex; flex-direction: column; gap: 1rem;">
+        <h3>Add User</h3>
+        <FluentTextField @bind-Value="newUserEmail" Label="Email" Style="width: 100%;" />
+        <FluentTextField @bind-Value="newUserPassword" Label="Password (Optional)" TextFieldType="TextFieldType.Password" Style="width: 100%;" />
+        <FluentCheckbox @bind-Value="newUserCreateMember" Label="Create as Member" />
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="() => isAddUserDialogOpen = false">Cancel</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="AddUserAsync">Create</FluentButton>
+        </div>
+    </div>
+</FluentDialog>
+
+@code {
+    private IQueryable<AdminUserViewModel>? usersQueryable;
+    private IQueryable<AdminUserViewModel>? filteredUsers;
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+    private string searchTerm = string.Empty;
+    private IEnumerable<AdminUserViewModel> selectedUsers = new List<AdminUserViewModel>();
+
+    // Single action state
+    private bool isSetPasswordDialogOpen;
+    private AdminUserViewModel? selectedUserForAction;
+    private string newPassword = string.Empty;
+
+    // Add user state
+    private bool isAddUserDialogOpen;
+    private string newUserEmail = string.Empty;
+    private string newUserPassword = string.Empty;
+    private bool newUserCreateMember;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        var users = await DbContext.Users.ToListAsync();
+        var members = await DbContext.Members.ToListAsync();
+
+        var viewModels = new List<AdminUserViewModel>();
+
+        foreach (var user in users)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            var member = members.FirstOrDefault(m => m.ApplicationUserId == user.Id);
+
+            viewModels.Add(new AdminUserViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                Roles = roles,
+                IsEnabled = user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow,
+                IsMember = member != null,
+                MemberStatus = member?.Status,
+                MembershipTypeName = member?.MembershipTypeName
+            });
+        }
+
+        usersQueryable = viewModels.AsQueryable();
+        ApplyFilter();
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (usersQueryable == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredUsers = usersQueryable;
+        }
+        else
+        {
+            filteredUsers = usersQueryable.Where(u => u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private async Task EnableSelectedAsync()
+    {
+        foreach (var selected in selectedUsers)
+        {
+            var user = await UserManager.FindByIdAsync(selected.Id);
+            if (user != null)
+            {
+                await UserManager.SetLockoutEndDateAsync(user, null);
+            }
+        }
+
+        await LoadUsersAsync();
+        selectedUsers = new List<AdminUserViewModel>();
+    }
+
+    private async Task DisableSelectedAsync()
+    {
+        foreach (var selected in selectedUsers)
+        {
+            var user = await UserManager.FindByIdAsync(selected.Id);
+            if (user != null)
+            {
+                await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+            }
+        }
+
+        await LoadUsersAsync();
+        selectedUsers = new List<AdminUserViewModel>();
+    }
+
+    private void ShowSetPasswordDialog(AdminUserViewModel user)
+    {
+        selectedUserForAction = user;
+        newPassword = string.Empty;
+        isSetPasswordDialogOpen = true;
+    }
+
+    private async Task SetPasswordAsync()
+    {
+        if (selectedUserForAction == null || string.IsNullOrWhiteSpace(newPassword)) return;
+
+        var user = await UserManager.FindByIdAsync(selectedUserForAction.Id);
+        if (user != null)
+        {
+            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            await UserManager.ResetPasswordAsync(user, token, newPassword);
+        }
+
+        isSetPasswordDialogOpen = false;
+        selectedUserForAction = null;
+    }
+
+    private async Task SendResetLinkAsync(AdminUserViewModel userViewModel)
+    {
+        var user = await UserManager.FindByIdAsync(userViewModel.Id);
+        if (user != null)
+        {
+            // Normally you would inject IEmailSender<ApplicationUser> and send the link here
+            // var code = await UserManager.GeneratePasswordResetTokenAsync(user);
+            // ... generate reset url ...
+            // await EmailSender.SendPasswordResetLinkAsync(user, user.Email, resetUrl);
+
+            // For now, we simulate success as the email sender might be a no-op in dev
+            Console.WriteLine($"Simulated sending reset link to {user.Email}");
+        }
+    }
+
+    private async Task DeleteAccountAsync(AdminUserViewModel userViewModel)
+    {
+        var user = await UserManager.FindByIdAsync(userViewModel.Id);
+        if (user != null)
+        {
+            // If they are a member, delete member record first
+            var member = await DbContext.Members.FirstOrDefaultAsync(m => m.ApplicationUserId == user.Id);
+            if (member != null)
+            {
+                DbContext.Members.Remove(member);
+                await DbContext.SaveChangesAsync();
+            }
+
+            await UserManager.DeleteAsync(user);
+            await LoadUsersAsync();
+        }
+    }
+
+    private void ShowAddUserDialog()
+    {
+        newUserEmail = string.Empty;
+        newUserPassword = string.Empty;
+        newUserCreateMember = false;
+        isAddUserDialogOpen = true;
+    }
+
+    private async Task AddUserAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newUserEmail)) return;
+
+        var user = new ApplicationUser
+        {
+            UserName = newUserEmail,
+            Email = newUserEmail,
+            EmailConfirmed = true
+        };
+
+        IdentityResult result;
+        if (!string.IsNullOrWhiteSpace(newUserPassword))
+        {
+            result = await UserManager.CreateAsync(user, newUserPassword);
+        }
+        else
+        {
+            result = await UserManager.CreateAsync(user);
+        }
+
+        if (result.Succeeded)
+        {
+            if (newUserCreateMember)
+            {
+                var member = new Member
+                {
+                    ApplicationUserId = user.Id,
+                    MembershipTypeName = "Standard",
+                    Status = MemberStatus.Active
+                };
+                DbContext.Members.Add(member);
+                await DbContext.SaveChangesAsync();
+
+                await UserManager.AddToRoleAsync(user, Roles.Member);
+            }
+
+            isAddUserDialogOpen = false;
+            await LoadUsersAsync();
+        }
+        else
+        {
+            // Handle errors (e.g. show a toast or error message)
+            Console.WriteLine(string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
+    }
+}
