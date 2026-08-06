@@ -1,21 +1,17 @@
 @page "/admin/users"
-@using System.Text
-@using System.Text.Encodings.Web
 @using CBAI.Web.Data
 @using CBAI.Web.Data.Seed
 @using CBAI.Web.Membership
 @using CBAI.Web.Components.Pages.Admin.Models
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.FluentUI.AspNetCore.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject ApplicationDbContext DbContext
-@inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager NavigationManager
-@inject ILogger<Users> Logger
+@inject IEmailSender<ApplicationUser> EmailSender
 
 @attribute [Authorize(Roles = Roles.Administrator)]
 @rendermode InteractiveServer
@@ -147,6 +143,7 @@ else
     {
         var users = await DbContext.Users.ToListAsync();
         var members = await DbContext.Members.ToListAsync();
+
         var membersByUserId = members.ToLookup(m => m.ApplicationUserId);
 
         var viewModels = new List<AdminUserViewModel>();
@@ -259,12 +256,12 @@ else
         }
 
         var code = await UserManager.GeneratePasswordResetTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        code = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ResetPassword").AbsoluteUri,
             new Dictionary<string, object?> { ["code"] = code });
 
-        await EmailSender.SendPasswordResetLinkAsync(user, user.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendPasswordResetLinkAsync(user, user.Email, System.Text.Encodings.Web.HtmlEncoder.Default.Encode(callbackUrl));
         SetSuccessStatusMessage($"Password reset link sent to {user.Email}.");
     }
 
@@ -340,33 +337,34 @@ else
         }
         else
         {
-            Logger.LogWarning("Failed to create user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-            SetErrorStatusMessage(string.Join(" ", result.Errors.Select(e => e.Description)));
+            // Handle errors (e.g. show a toast or error message)
+            Console.WriteLine(string.Join(", ", result.Errors.Select(e => e.Description)));
         }
     }
 
-    private async Task<bool> TryApplyIdentityResultAsync(IdentityResult result, string actionName)
+    private async Task<bool> TryApplyIdentityResultAsync(IdentityResult result, string actionDescription)
     {
         if (result.Succeeded)
         {
+            SetSuccessStatusMessage($"Successfully completed: {actionDescription}.");
             return true;
         }
 
-        var errors = string.Join(" ", result.Errors.Select(e => e.Description));
-        Logger.LogWarning("Failed to {ActionName}: {Errors}", actionName, errors);
-        SetErrorStatusMessage(errors);
+        SetErrorStatusMessage($"Failed to {actionDescription}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         return false;
-    }
-
-    private void SetErrorStatusMessage(string message)
-    {
-        statusMessage = $"Error: {message}";
-        statusIsError = true;
     }
 
     private void SetSuccessStatusMessage(string message)
     {
         statusMessage = message;
         statusIsError = false;
+        StateHasChanged();
+    }
+
+    private void SetErrorStatusMessage(string message)
+    {
+        statusMessage = message;
+        statusIsError = true;
+        StateHasChanged();
     }
 }
