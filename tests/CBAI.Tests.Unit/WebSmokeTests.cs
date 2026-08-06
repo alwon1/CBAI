@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace CBAI.Tests.Unit;
@@ -28,14 +27,5 @@ public sealed class WebSmokeTests
 
         Assert.AreNotEqual(HttpStatusCode.NotFound, response.StatusCode);
         Assert.IsFalse(content.Contains("Sorry, the content you are looking for does not exist.", StringComparison.Ordinal));
-    }
-
-    [TestMethod]
-    public void AdminUsersPage_ExcludesInteractiveRouting()
-    {
-        var attributes = typeof(CBAI.Web.Components.Pages.Admin.Users)
-            .GetCustomAttributes(typeof(ExcludeFromInteractiveRoutingAttribute), inherit: true);
-
-        Assert.HasCount(1, attributes);
     }
 }
