@@ -1,6 +1,4 @@
-﻿@using System.Reflection
-
-<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="GetAdditionalAssemblies()" NotFoundPage="typeof(Pages.NotFound)">
+﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>
@@ -10,11 +8,3 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
-
-@code {
-    private static Assembly[] GetAdditionalAssemblies()
-        => AppDomain.CurrentDomain
-            .GetAssemblies()
-            .Where(assembly => assembly.GetName().Name is "CBAI.Web")
-            .ToArray();
-}
