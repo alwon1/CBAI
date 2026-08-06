@@ -89,30 +89,36 @@ else
     <FluentPaginator State="@pagination" />
 }
 
-<FluentDialog @bind-Visible="isSetPasswordDialogOpen" Modal="true">
-    <div style="padding: 1rem; width: 300px;">
-        <h3>Set Password for @selectedUserForAction?.Email</h3>
-        <FluentTextField @bind-Value="newPassword" Label="New Password" TextFieldType="TextFieldType.Password" Style="width: 100%; margin-bottom: 1rem;" />
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <FluentButton Appearance="Appearance.Neutral" OnClick="() => isSetPasswordDialogOpen = false">Cancel</FluentButton>
-            <FluentButton Appearance="Appearance.Accent" OnClick="SetPasswordAsync">Save</FluentButton>
+@if (isSetPasswordDialogOpen)
+{
+    <FluentDialog Visible="true" Modal="true">
+        <div style="padding: 1rem; width: 300px;">
+            <h3>Set Password for @selectedUserForAction?.Email</h3>
+            <FluentTextField @bind-Value="newPassword" Label="New Password" TextFieldType="TextFieldType.Password" Style="width: 100%; margin-bottom: 1rem;" />
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <FluentButton Appearance="Appearance.Neutral" OnClick="() => isSetPasswordDialogOpen = false">Cancel</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="SetPasswordAsync">Save</FluentButton>
+            </div>
         </div>
-    </div>
-</FluentDialog>
+    </FluentDialog>
+}
 
-<FluentDialog @bind-Visible="isAddUserDialogOpen" Modal="true">
-    <div style="padding: 1rem; width: 400px; display: flex; flex-direction: column; gap: 1rem;">
-        <h3>Add User</h3>
-        <FluentTextField @bind-Value="newUserEmail" Label="Email" Style="width: 100%;" />
-        <FluentTextField @bind-Value="newUserPassword" Label="Password (Optional)" TextFieldType="TextFieldType.Password" Style="width: 100%;" />
-        <FluentCheckbox @bind-Value="newUserCreateMember" Label="Create as Member" />
+@if (isAddUserDialogOpen)
+{
+    <FluentDialog Visible="true" Modal="true">
+        <div style="padding: 1rem; width: 400px; display: flex; flex-direction: column; gap: 1rem;">
+            <h3>Add User</h3>
+            <FluentTextField @bind-Value="newUserEmail" Label="Email" Style="width: 100%;" />
+            <FluentTextField @bind-Value="newUserPassword" Label="Password (Optional)" TextFieldType="TextFieldType.Password" Style="width: 100%;" />
+            <FluentCheckbox @bind-Value="newUserCreateMember" Label="Create as Member" />
 
-        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
-            <FluentButton Appearance="Appearance.Neutral" OnClick="() => isAddUserDialogOpen = false">Cancel</FluentButton>
-            <FluentButton Appearance="Appearance.Accent" OnClick="AddUserAsync">Create</FluentButton>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                <FluentButton Appearance="Appearance.Neutral" OnClick="() => isAddUserDialogOpen = false">Cancel</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="AddUserAsync">Create</FluentButton>
+            </div>
         </div>
-    </div>
-</FluentDialog>
+    </FluentDialog>
+}
 
 @code {
     private IQueryable<AdminUserViewModel>? usersQueryable;
