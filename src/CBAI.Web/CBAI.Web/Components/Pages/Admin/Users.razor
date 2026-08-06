@@ -144,13 +144,20 @@ else
         var users = await DbContext.Users.ToListAsync();
         var members = await DbContext.Members.ToListAsync();
 
+        // ⚡ Bolt Optimization:
+        // Replaced `UserManager.GetRolesAsync` inside the foreach loop with a bulk fetch
+        // and in-memory lookup. This solves a severe N+1 query problem, turning O(N) database
+        // calls into O(1) for roles, significantly speeding up the Admin Users page load time.
+        var userRoles = await DbContext.UserRoles.Join(DbContext.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, RoleName = r.Name }).ToListAsync();
+
         var membersByUserId = members.ToLookup(m => m.ApplicationUserId);
+        var rolesByUserId = userRoles.ToLookup(ur => ur.UserId, ur => ur.RoleName!);
 
         var viewModels = new List<AdminUserViewModel>();
 
         foreach (var user in users)
         {
-            var roles = await UserManager.GetRolesAsync(user);
+            var roles = rolesByUserId[user.Id].ToList();
             var member = membersByUserId[user.Id].FirstOrDefault();
 
             viewModels.Add(new AdminUserViewModel
