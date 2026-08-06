@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager NavigationManager
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +9,46 @@
 
     <main>
         <div class="top-row">
-            <FluentAnchor Href="https://learn.microsoft.com/aspnet/core/" Target="_blank" Appearance="Appearance.Hypertext">
+            <AuthorizeView>
+                <Authorized>
+                    <FluentProfileMenu Initials="@(context.User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")"
+                                       FullName="@context.User.Identity?.Name"
+                                       EMail="@context.User.Identity?.Name">
+                        <HeaderTemplate>
+                            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                                <FluentLabel>@context.User.Identity?.Name</FluentLabel>
+                                <FluentSpacer />
+                                <form action="Account/Logout" method="post" style="margin: 0;">
+                                    <AntiforgeryToken />
+                                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Stealth">Logout</FluentButton>
+                                </form>
+                            </FluentStack>
+                        </HeaderTemplate>
+                        <FooterTemplate>
+                            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                                <FluentAnchor Href="Account/Manage" Appearance="Appearance.Hypertext">Manage account</FluentAnchor>
+                            </FluentStack>
+                        </FooterTemplate>
+                    </FluentProfileMenu>
+                </Authorized>
+                <NotAuthorized>
+                    <FluentProfileMenu Initials="?" FullName="Guest" EMail="Not logged in">
+                        <HeaderTemplate>
+                            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                                <FluentLabel>Guest</FluentLabel>
+                            </FluentStack>
+                        </HeaderTemplate>
+                        <FooterTemplate>
+                            <FluentStack VerticalAlignment="VerticalAlignment.Center" HorizontalGap="10">
+                                <FluentAnchor Href="Account/Login" Appearance="Appearance.Stealth">Login</FluentAnchor>
+                                <FluentAnchor Href="Account/Register" Appearance="Appearance.Stealth">Register</FluentAnchor>
+                            </FluentStack>
+                        </FooterTemplate>
+                    </FluentProfileMenu>
+                </NotAuthorized>
+            </AuthorizeView>
+            <FluentAnchor Href="https://learn.microsoft.com/aspnet/core/" Target="_blank" Appearance="Appearance.Hypertext" Style="margin-left: 10px;">
                 About
             </FluentAnchor>
         </div>
@@ -29,3 +70,24 @@
 <FluentTooltipProvider />
 <FluentMessageBarProvider />
 <FluentMenuProvider />
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
