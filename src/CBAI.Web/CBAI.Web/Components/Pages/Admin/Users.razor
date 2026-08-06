@@ -196,7 +196,7 @@ else
             var user = await UserManager.FindByIdAsync(selected.Id);
             if (user != null)
             {
-                await UserManager.SetLockoutEndDateAsync(user, null);
+                await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, null), "enable account");
             }
         }
 
@@ -270,17 +270,17 @@ else
         var user = await UserManager.FindByIdAsync(userViewModel.Id);
         if (user != null)
         {
-            // If they are a member, delete member record first
+            if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
+            {
+                return;
+            }
+
+            // If they are a member, delete member record after successfully deleting identity user
             var member = await DbContext.Members.FirstOrDefaultAsync(m => m.ApplicationUserId == user.Id);
             if (member != null)
             {
                 DbContext.Members.Remove(member);
                 await DbContext.SaveChangesAsync();
-            }
-
-            if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
-            {
-                return;
             }
 
             await LoadUsersAsync();
@@ -320,6 +320,12 @@ else
         {
             if (newUserCreateMember)
             {
+                if (!await TryApplyIdentityResultAsync(await UserManager.AddToRoleAsync(user, Roles.Member), "assign member role"))
+                {
+                    // Optionally handle cleanup or failure state if role assignment fails
+                    return;
+                }
+
                 var member = new Member
                 {
                     ApplicationUserId = user.Id,
@@ -328,17 +334,15 @@ else
                 };
                 DbContext.Members.Add(member);
                 await DbContext.SaveChangesAsync();
-
-                await UserManager.AddToRoleAsync(user, Roles.Member);
             }
 
             isAddUserDialogOpen = false;
+            SetSuccessStatusMessage($"Successfully created user {user.Email}.");
             await LoadUsersAsync();
         }
         else
         {
-            // Handle errors (e.g. show a toast or error message)
-            Console.WriteLine(string.Join(", ", result.Errors.Select(e => e.Description)));
+            SetErrorStatusMessage($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         }
     }
 
