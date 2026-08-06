@@ -60,8 +60,9 @@ customElements.define('passkey-submit', class extends HTMLElement {
       // Convert Uint8Array to base64
       if (o instanceof Uint8Array) {
         let str = '';
-        for (let i = 0; i < o.byteLength; i++) {
-          str += String.fromCharCode(o[i]);
+        const chunkSize = 0x2000;
+        for (let i = 0; i < o.byteLength; i += chunkSize) {
+          str += String.fromCharCode(...o.subarray(i, i + chunkSize));
         }
         o = window.btoa(str);
       }
