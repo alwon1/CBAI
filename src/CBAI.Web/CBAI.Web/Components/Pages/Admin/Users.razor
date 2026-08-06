@@ -216,7 +216,13 @@ else
                     continue;
                 }
 
-                await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "disable account");
+                if (!await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "disable account"))
+                {
+                    continue;
+                }
+
+                // Invalidate existing authentication cookies and interactive sessions, not just future sign-ins.
+                await TryApplyIdentityResultAsync(await UserManager.UpdateSecurityStampAsync(user), "revoke active sessions");
             }
         }
 
