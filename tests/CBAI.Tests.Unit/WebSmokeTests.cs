@@ -16,7 +16,7 @@ public sealed class WebSmokeTests
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
     }
-
+// needs to be replaced with playwright test
     [TestMethod]
     public async Task AdminUsersPage_DoesNotReturnNotFoundPage()
     {
