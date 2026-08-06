@@ -125,6 +125,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             throw new InvalidMembershipApplicationTransitionException($"Application '{applicationId}' cannot be decided from {application.Status}.");
         }
 
+        var previousStatus = application.Status;
         var decisionMaker = string.IsNullOrWhiteSpace(decidedByUserId)
             ? null
             : await userManager.FindByIdAsync(decidedByUserId);
@@ -155,7 +156,7 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             Details = notes,
         });
 
-        await SaveTransitionAsync(application, MembershipApplicationStatus.Submitted, cancellationToken);
+        await SaveTransitionAsync(application, previousStatus, cancellationToken);
         return application;
     }
 

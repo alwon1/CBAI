@@ -15,7 +15,7 @@
 @code {
  private IReadOnlyList<MembershipApplication>? items; private string? userId; private readonly Dictionary<string,string> names=[]; private readonly Dictionary<Guid,string> notes=[]; private readonly Dictionary<Guid,IReadOnlyList<MembershipApplicationAuditEntry>> audits=[];
  protected override async Task OnInitializedAsync(){userId=Users.GetUserId((await AuthenticationState.GetAuthenticationStateAsync()).User);await Load();}
- private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();foreach(var x in items){var u=await Users.FindByIdAsync(x.ApplicantUserId);names[x.ApplicantUserId]=u?.Email??"Applicant";notes.TryAdd(x.Id,"");audits[x.Id]=await Applications.GetAuditTrailAsync(x.Id);}}
+ private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();var userTasks=items.Select(x=>Users.FindByIdAsync(x.ApplicantUserId));var auditTasks=items.Select(x=>Applications.GetAuditTrailAsync(x.Id));var userResults=await Task.WhenAll(userTasks);var auditResults=await Task.WhenAll(auditTasks);for(var i=0;i<items.Count;i++){var x=items[i];names[x.ApplicantUserId]=userResults[i]?.Email??"Applicant";notes.TryAdd(x.Id,"");audits[x.Id]=auditResults[i];}}
  private string Name(string id)=>names.GetValueOrDefault(id,"Applicant"); private IReadOnlyList<MembershipApplicationAuditEntry> Audits(Guid id)=>audits.GetValueOrDefault(id,[]);
  private async Task Move(Guid id,MembershipApplicationStatus status){if(userId is null)return;await Applications.ChangeStatusAsync(id,userId,status,notes.GetValueOrDefault(id));await Load();}
 }

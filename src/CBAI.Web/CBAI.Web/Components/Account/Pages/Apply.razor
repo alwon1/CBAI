@@ -201,7 +201,7 @@
                 draft.RequestedMembershipTypeName = membership.MembershipType;
                 await Applications.SubmitAsync(draft.Id, sponsor.Id);
             }
-            catch (Exception ex) when (ex is SponsorIneligibleException or InvalidOperationException)
+            catch (Exception ex) when (ex is SponsorIneligibleException or InvalidOperationException or InvalidMembershipApplicationTransitionException)
             {
                 if (draft is not null)
                 {
@@ -209,9 +209,11 @@
                 }
 
                 await UserManager.DeleteAsync(user);
-                errors.Add(ex is SponsorIneligibleException
-                    ? "That account is not eligible to sponsor an application."
-                    : "We could not create your application.");
+                    errors.Add(ex is SponsorIneligibleException
+                        ? "That account is not eligible to sponsor an application."
+                        : ex is InvalidMembershipApplicationTransitionException
+                            ? "Your application changed while it was being submitted. Please try again."
+                            : "We could not create your application.");
                 return;
             }
 
