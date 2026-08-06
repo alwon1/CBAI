@@ -29,16 +29,12 @@ async function createCredential(headers, signal) {
 }
 
 async function requestCredential(email, mediation, headers, signal) {
-    const url = new URL('/Account/PasskeyRequestOptions', window.location.origin);
-    if (typeof email === 'string' && email.length > 0) {
-        url.searchParams.set('username', email);
-    }
-
-    const optionsResponse = await fetchWithErrorHandling(url, {
+    const optionsResponse = await fetchWithErrorHandling(`/Account/PasskeyRequestOptions?username=${email}`, {
         method: 'POST',
         headers,
         signal,
     });
+    const optionsJson = await optionsResponse.json();
     const options = PublicKeyCredential.parseRequestOptionsFromJSON(optionsJson);
     return await navigator.credentials.get({ publicKey: options, mediation, signal });
 }
