@@ -273,19 +273,21 @@ else
         var user = await UserManager.FindByIdAsync(userViewModel.Id);
         if (user != null)
         {
-            // If they are a member, delete member record first
+            await using var transaction = await DbContext.Database.BeginTransactionAsync();
             var member = await DbContext.Members.FirstOrDefaultAsync(m => m.ApplicationUserId == user.Id);
             if (member != null)
             {
                 DbContext.Members.Remove(member);
-                await DbContext.SaveChangesAsync();
             }
 
             if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
             {
+                await transaction.RollbackAsync();
+                DbContext.ChangeTracker.Clear();
                 return;
             }
 
+            await transaction.CommitAsync();
             await LoadUsersAsync();
         }
     }
