@@ -216,13 +216,7 @@ else
                     continue;
                 }
 
-                if (!await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "disable account"))
-                {
-                    continue;
-                }
-
-                // Invalidate existing authentication cookies and interactive sessions, not just future sign-ins.
-                await TryApplyIdentityResultAsync(await UserManager.UpdateSecurityStampAsync(user), "revoke active sessions");
+                await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "disable account");
             }
         }
 
@@ -276,21 +270,19 @@ else
         var user = await UserManager.FindByIdAsync(userViewModel.Id);
         if (user != null)
         {
-            await using var transaction = await DbContext.Database.BeginTransactionAsync();
+            // If they are a member, delete member record first
             var member = await DbContext.Members.FirstOrDefaultAsync(m => m.ApplicationUserId == user.Id);
             if (member != null)
             {
                 DbContext.Members.Remove(member);
+                await DbContext.SaveChangesAsync();
             }
 
             if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
             {
-                await transaction.RollbackAsync();
-                DbContext.ChangeTracker.Clear();
                 return;
             }
 
-            await transaction.CommitAsync();
             await LoadUsersAsync();
         }
     }
