@@ -1,15 +1,21 @@
 @page "/admin/users"
+@using System.Text
+@using System.Text.Encodings.Web
 @using CBAI.Web.Data
 @using CBAI.Web.Data.Seed
 @using CBAI.Web.Membership
 @using CBAI.Web.Components.Pages.Admin.Models
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.FluentUI.AspNetCore.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject ApplicationDbContext DbContext
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject ILogger<Users> Logger
 
 @attribute [Authorize(Roles = Roles.Administrator)]
 @rendermode InteractiveServer
@@ -19,6 +25,13 @@
 <h1>Manage Users</h1>
 
 <p>Admin panel for managing users and members.</p>
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <FluentMessageBar Intent="@(statusIsError ? MessageIntent.Error : MessageIntent.Success)" AllowDismiss="false">
+        @statusMessage
+    </FluentMessageBar>
+}
 
 <div style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 1rem;">
     <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between;">
@@ -122,6 +135,8 @@ else
     private string newUserEmail = string.Empty;
     private string newUserPassword = string.Empty;
     private bool newUserCreateMember;
+    private string? statusMessage;
+    private bool statusIsError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,20 +147,21 @@ else
     {
         var users = await DbContext.Users.ToListAsync();
         var members = await DbContext.Members.ToListAsync();
+        var membersByUserId = members.ToLookup(m => m.ApplicationUserId);
 
         var viewModels = new List<AdminUserViewModel>();
 
         foreach (var user in users)
         {
             var roles = await UserManager.GetRolesAsync(user);
-            var member = members.FirstOrDefault(m => m.ApplicationUserId == user.Id);
+            var member = membersByUserId[user.Id].FirstOrDefault();
 
             viewModels.Add(new AdminUserViewModel
             {
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
                 Roles = roles,
-                IsEnabled = user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow,
+                IsEnabled = !user.LockoutEnabled || user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow,
                 IsMember = member != null,
                 MemberStatus = member?.Status,
                 MembershipTypeName = member?.MembershipTypeName
@@ -198,7 +214,12 @@ else
             var user = await UserManager.FindByIdAsync(selected.Id);
             if (user != null)
             {
-                await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+                if (!await TryApplyIdentityResultAsync(await UserManager.SetLockoutEnabledAsync(user, true), "disable account"))
+                {
+                    continue;
+                }
+
+                await TryApplyIdentityResultAsync(await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "disable account");
             }
         }
 
@@ -221,7 +242,7 @@ else
         if (user != null)
         {
             var token = await UserManager.GeneratePasswordResetTokenAsync(user);
-            await UserManager.ResetPasswordAsync(user, token, newPassword);
+            await TryApplyIdentityResultAsync(await UserManager.ResetPasswordAsync(user, token, newPassword), "set password");
         }
 
         isSetPasswordDialogOpen = false;
@@ -231,16 +252,20 @@ else
     private async Task SendResetLinkAsync(AdminUserViewModel userViewModel)
     {
         var user = await UserManager.FindByIdAsync(userViewModel.Id);
-        if (user != null)
+        if (user == null || string.IsNullOrWhiteSpace(user.Email))
         {
-            // Normally you would inject IEmailSender<ApplicationUser> and send the link here
-            // var code = await UserManager.GeneratePasswordResetTokenAsync(user);
-            // ... generate reset url ...
-            // await EmailSender.SendPasswordResetLinkAsync(user, user.Email, resetUrl);
-
-            // For now, we simulate success as the email sender might be a no-op in dev
-            Console.WriteLine($"Simulated sending reset link to {user.Email}");
+            SetErrorStatusMessage("Unable to send reset link.");
+            return;
         }
+
+        var code = await UserManager.GeneratePasswordResetTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ResetPassword").AbsoluteUri,
+            new Dictionary<string, object?> { ["code"] = code });
+
+        await EmailSender.SendPasswordResetLinkAsync(user, user.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        SetSuccessStatusMessage($"Password reset link sent to {user.Email}.");
     }
 
     private async Task DeleteAccountAsync(AdminUserViewModel userViewModel)
@@ -256,7 +281,11 @@ else
                 await DbContext.SaveChangesAsync();
             }
 
-            await UserManager.DeleteAsync(user);
+            if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
+            {
+                return;
+            }
+
             await LoadUsersAsync();
         }
     }
@@ -311,8 +340,33 @@ else
         }
         else
         {
-            // Handle errors (e.g. show a toast or error message)
-            Console.WriteLine(string.Join(", ", result.Errors.Select(e => e.Description)));
+            Logger.LogWarning("Failed to create user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+            SetErrorStatusMessage(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
+    }
+
+    private async Task<bool> TryApplyIdentityResultAsync(IdentityResult result, string actionName)
+    {
+        if (result.Succeeded)
+        {
+            return true;
+        }
+
+        var errors = string.Join(" ", result.Errors.Select(e => e.Description));
+        Logger.LogWarning("Failed to {ActionName}: {Errors}", actionName, errors);
+        SetErrorStatusMessage(errors);
+        return false;
+    }
+
+    private void SetErrorStatusMessage(string message)
+    {
+        statusMessage = $"Error: {message}";
+        statusIsError = true;
+    }
+
+    private void SetSuccessStatusMessage(string message)
+    {
+        statusMessage = message;
+        statusIsError = false;
     }
 }

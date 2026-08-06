@@ -1,5 +1,6 @@
 @implements IDisposable
 
+@using CBAI.Web.Client.Security
 @inject NavigationManager NavigationManager
 
 <div class="nav-menu">
@@ -7,7 +8,7 @@
         <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
         <FluentNavLink Href="auth">Auth Required</FluentNavLink>
 
-        <AuthorizeView Roles="Administrator">
+        <AuthorizeView Roles="@Roles.Administrator">
             <FluentNavLink Href="admin/users">Manage Users</FluentNavLink>
         </AuthorizeView>
 
