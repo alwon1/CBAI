@@ -7,6 +7,10 @@
         <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
         <FluentNavLink Href="auth">Auth Required</FluentNavLink>
 
+        <AuthorizeView Roles="Administrator">
+            <FluentNavLink Href="admin/users">Manage Users</FluentNavLink>
+        </AuthorizeView>
+
         <AuthorizeView>
             <Authorized>
                 <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
