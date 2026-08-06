@@ -1,0 +1,248 @@
+@page "/apply"
+@page "/Account/Register"
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using CBAI.Web.Data
+@using CBAI.Web.Membership
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject IMembershipApplicationService Applications
+@inject NavigationManager Navigation
+
+<PageTitle>Apply for membership</PageTitle>
+
+<div class="wizard-page">
+    <header class="wizard-heading">
+        <p class="eyebrow">Membership application</p>
+        <h1>Join the CBAI community</h1>
+        <p>Set up your account, choose your membership, and ask an eligible member to sponsor you.</p>
+    </header>
+
+    @if (errors.Count > 0)
+    {
+        <FluentMessageBar Intent="MessageIntent.Error" DismissTitle="Dismiss" OnDismiss="DismissErrors">
+            @foreach (var error in errors)
+            {
+                <div>@error</div>
+            }
+        </FluentMessageBar>
+    }
+
+    <FluentWizard Width="100%"
+                  StepperPosition="StepperPosition.Top"
+                  StepSequence="WizardStepSequence.Linear"
+                  Border="WizardBorder.Outside"
+                  OnFinish="CreateApplication">
+        <Steps>
+        <FluentWizardStep Label="Account"
+                          Summary="Sign-in details">
+            <EditForm EditContext="accountContext">
+                <DataAnnotationsValidator />
+                <div class="wizard-step-content">
+                    <div class="step-introduction">
+                        <h2>Create your account</h2>
+                        <p>You will use this email and password to follow your application.</p>
+                    </div>
+
+                    <FluentTextField @bind-Value="account.Email"
+                                     Label="Email address"
+                                     Placeholder="name@example.com"
+                                     AutoComplete="username"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     Required="true"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => account.Email" />
+
+                    <FluentTextField @bind-Value="account.Password"
+                                     Label="Password"
+                                     AutoComplete="new-password"
+                                     TextFieldType="TextFieldType.Password"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     Required="true"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => account.Password" />
+
+                    <FluentTextField @bind-Value="account.ConfirmPassword"
+                                     Label="Confirm password"
+                                     AutoComplete="new-password"
+                                     TextFieldType="TextFieldType.Password"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     Required="true"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => account.ConfirmPassword" />
+                </div>
+            </EditForm>
+        </FluentWizardStep>
+
+        <FluentWizardStep Label="Membership"
+                          Summary="Type and sponsor">
+            <EditForm EditContext="membershipContext">
+                <DataAnnotationsValidator />
+                <div class="wizard-step-content">
+                    <div class="step-introduction">
+                        <h2>Membership and sponsorship</h2>
+                        <p>Your application reaches the committee after your sponsor confirms it.</p>
+                    </div>
+
+                    <FluentSelect TOption="string"
+                                  @bind-Value="membership.MembershipType"
+                                  Label="Membership type"
+                                  Appearance="Appearance.Outline"
+                                  Required="true"
+                                  StyleValue="width: 100%;">
+                        <FluentOption Value="Standard">Standard</FluentOption>
+                        <FluentOption Value="Student">Student</FluentOption>
+                        <FluentOption Value="Corporate">Corporate</FluentOption>
+                    </FluentSelect>
+                    <FluentValidationMessage For="() => membership.MembershipType" />
+
+                    <FluentTextField @bind-Value="membership.SponsorEmail"
+                                     Label="Sponsor email"
+                                     Placeholder="sponsor@example.com"
+                                     TextFieldType="TextFieldType.Email"
+                                     Appearance="FluentInputAppearance.Outline"
+                                     Required="true"
+                                     StyleValue="width: 100%;" />
+                    <FluentValidationMessage For="() => membership.SponsorEmail" />
+                    <p class="field-help">Your sponsor must hold the Sponsor or Board Member role.</p>
+                </div>
+            </EditForm>
+        </FluentWizardStep>
+
+        <FluentWizardStep Label="Review"
+                          Summary="Confirm and apply">
+            <div class="wizard-step-content">
+                <div class="step-introduction">
+                    <h2>Review your application</h2>
+                    <p>Choose Finish to create your account and send the request to your sponsor.</p>
+                </div>
+
+                <FluentCard Class="application-summary">
+                    <dl>
+                        <dt>Email</dt>
+                        <dd>@account.Email</dd>
+                        <dt>Membership type</dt>
+                        <dd>@membership.MembershipType</dd>
+                        <dt>Sponsor</dt>
+                        <dd>@membership.SponsorEmail</dd>
+                    </dl>
+                </FluentCard>
+            </div>
+        </FluentWizardStep>
+        </Steps>
+    </FluentWizard>
+
+    <p class="sign-in-link">Already have an account? <a href="Account/Login">Sign in</a></p>
+</div>
+
+@code {
+    private readonly AccountStepModel account = new();
+    private readonly MembershipStepModel membership = new();
+    private readonly EditContext accountContext;
+    private readonly EditContext membershipContext;
+    private readonly List<string> errors = [];
+    private bool submitting;
+
+    public Apply()
+    {
+        accountContext = new(account);
+        membershipContext = new(membership);
+    }
+
+    private Task DismissErrors()
+    {
+        errors.Clear();
+        return Task.CompletedTask;
+    }
+
+    private async Task CreateApplication()
+    {
+        if (submitting || !accountContext.Validate() || !membershipContext.Validate())
+        {
+            return;
+        }
+
+        submitting = true;
+        errors.Clear();
+
+        try
+        {
+            var sponsor = await UserManager.FindByEmailAsync(membership.SponsorEmail);
+            if (sponsor is null ||
+                !await Applications.IsSponsorEligibleAsync(sponsor.Id, "prospective-applicant"))
+            {
+                errors.Add("We could not find an eligible sponsor with that email address.");
+                return;
+            }
+
+            var user = new ApplicationUser();
+            await UserStore.SetUserNameAsync(user, account.Email, CancellationToken.None);
+            await GetEmailStore().SetEmailAsync(user, account.Email, CancellationToken.None);
+
+            var result = await UserManager.CreateAsync(user, account.Password);
+            if (!result.Succeeded)
+            {
+                errors.AddRange(result.Errors.Select(error => error.Description));
+                return;
+            }
+
+            try
+            {
+                var draft = await Applications.CreateDraftAsync(user.Id);
+                draft.RequestedMembershipTypeName = membership.MembershipType;
+                await Applications.SubmitAsync(draft.Id, sponsor.Id);
+            }
+            catch (Exception ex) when (ex is SponsorIneligibleException or InvalidOperationException)
+            {
+                await UserManager.DeleteAsync(user);
+                errors.Add(ex is SponsorIneligibleException
+                    ? "That account is not eligible to sponsor an application."
+                    : "We could not create your application.");
+                return;
+            }
+
+            Navigation.NavigateTo(
+                $"Account/RegisterConfirmation?email={Uri.EscapeDataString(account.Email)}",
+                forceLoad: true);
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The application requires an email-capable user store.");
+        }
+
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class AccountStepModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required, StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = "";
+
+        [Required, Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+
+    private sealed class MembershipStepModel
+    {
+        [Required]
+        public string MembershipType { get; set; } = "Standard";
+
+        [Required, EmailAddress]
+        public string SponsorEmail { get; set; } = "";
+    }
+}

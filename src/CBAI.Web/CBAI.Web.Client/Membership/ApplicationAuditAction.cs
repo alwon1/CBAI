@@ -7,7 +7,12 @@ namespace CBAI.Web.Client.Membership;
 public enum ApplicationAuditAction
 {
     Created,
+    SponsorshipRequested,
+    SponsorshipConfirmed,
+    SponsorshipDeclined,
     Submitted,
+    Waitlisted,
     Approved,
     Rejected,
+    Restored,
 }
