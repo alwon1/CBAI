@@ -1,0 +1,3 @@
+## 2024-08-06 - Adding ARIA labels to Fluent UI Components
+**Learning:** Fluent UI Blazor components (`<FluentSearch>`) require the `AriaLabel` property, whereas standard HTML or non-Fluent components (`<InputTextArea>`) use the standard `aria-label` attribute. Both need these labels when they lack visible text labels, even if they have placeholders, to ensure screen reader accessibility.
+**Action:** Always check the specific property requirements (camelCase `aria-label` vs PascalCase `AriaLabel`) based on the component library being used (Fluent UI vs standard Blazor).
