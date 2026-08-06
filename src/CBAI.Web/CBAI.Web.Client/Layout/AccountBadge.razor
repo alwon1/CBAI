@@ -1,0 +1,44 @@
+@inject IJSRuntime JSRuntime
+
+<AuthorizeView>
+    <Authorized>
+        <FluentProfileMenu Initials="@(context.User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")"
+                           FullName="@context.User.Identity?.Name"
+                           EMail="@context.User.Identity?.Name">
+            <HeaderTemplate>
+                <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                    <FluentLabel>@context.User.Identity?.Name</FluentLabel>
+                    <FluentSpacer />
+                    <FluentButton OnClick="Logout" Appearance="Appearance.Stealth">Logout</FluentButton>
+                </FluentStack>
+            </HeaderTemplate>
+            <FooterTemplate>
+                <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                    <FluentAnchor Href="Account/Manage" Appearance="Appearance.Hypertext">Manage account</FluentAnchor>
+                </FluentStack>
+            </FooterTemplate>
+        </FluentProfileMenu>
+    </Authorized>
+    <NotAuthorized>
+        <FluentProfileMenu Initials="?" FullName="Guest" EMail="Not logged in">
+            <HeaderTemplate>
+                <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                    <FluentLabel>Guest</FluentLabel>
+                </FluentStack>
+            </HeaderTemplate>
+            <FooterTemplate>
+                <FluentStack VerticalAlignment="VerticalAlignment.Center" HorizontalGap="10">
+                    <FluentAnchor Href="Account/Login" Appearance="Appearance.Stealth">Login</FluentAnchor>
+                    <FluentAnchor Href="Account/Register" Appearance="Appearance.Stealth">Register</FluentAnchor>
+                </FluentStack>
+            </FooterTemplate>
+        </FluentProfileMenu>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private async Task Logout()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('hidden-logout-form').submit();");
+    }
+}
