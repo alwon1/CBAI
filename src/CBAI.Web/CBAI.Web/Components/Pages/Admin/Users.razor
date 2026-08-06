@@ -320,21 +320,6 @@ else
         {
             if (newUserCreateMember)
             {
-                var roleResult = await UserManager.AddToRoleAsync(user, Roles.Member);
-                if (!await TryApplyIdentityResultAsync(roleResult, $"assign the {Roles.Member} role"))
-                {
-                    var rollbackResult = await UserManager.DeleteAsync(user);
-                    if (!rollbackResult.Succeeded)
-                    {
-                        Logger.LogError(
-                            "Failed to roll back user {UserId} after role assignment failed: {Errors}",
-                            user.Id,
-                            string.Join(", ", rollbackResult.Errors.Select(e => e.Description)));
-                    }
-
-                    return;
-                }
-
                 var member = new Member
                 {
                     ApplicationUserId = user.Id,
@@ -343,6 +328,8 @@ else
                 };
                 DbContext.Members.Add(member);
                 await DbContext.SaveChangesAsync();
+
+                await UserManager.AddToRoleAsync(user, Roles.Member);
             }
 
             isAddUserDialogOpen = false;
