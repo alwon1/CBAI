@@ -5,7 +5,14 @@
 <div class="nav-menu">
     <FluentNavMenu Title="CBAI" Width="280" Collapsible="true">
         <FluentNavLink Href="" Match="NavLinkMatch.All">Home</FluentNavLink>
-        <FluentNavLink Href="auth">Auth Required</FluentNavLink>
+
+        <AuthorizeView Roles="Sponsor,BoardMember">
+            <FluentNavLink Href="membership/sponsorships">Sponsorship Requests</FluentNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Staff,BoardMember">
+            <FluentNavLink Href="membership/review">Review Applications</FluentNavLink>
+        </AuthorizeView>
 
         <AuthorizeView Roles="Administrator">
             <FluentNavLink Href="admin/users">Manage Users</FluentNavLink>
@@ -13,6 +20,7 @@
 
         <AuthorizeView>
             <Authorized>
+                <FluentNavLink Href="membership/application">My Application</FluentNavLink>
                 <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
                 <form action="Account/Logout" method="post">
                     <AntiforgeryToken />
@@ -23,7 +31,7 @@
                 </form>
             </Authorized>
             <NotAuthorized>
-                <FluentNavLink Href="Account/Register">Register</FluentNavLink>
+                <FluentNavLink Href="apply">Apply for Membership</FluentNavLink>
                 <FluentNavLink Href="Account/Login">Login</FluentNavLink>
             </NotAuthorized>
         </AuthorizeView>

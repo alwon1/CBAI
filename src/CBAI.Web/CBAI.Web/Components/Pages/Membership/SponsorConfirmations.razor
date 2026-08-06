@@ -1,0 +1,24 @@
+@page "/membership/sponsorships"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Sponsor,BoardMember")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using CBAI.Web.Data
+@using CBAI.Web.Membership
+@inject IMembershipApplicationService Applications
+@inject UserManager<ApplicationUser> Users
+@inject AuthenticationStateProvider AuthenticationState
+
+<PageTitle>Sponsorship requests</PageTitle>
+<div class="page-heading"><p class="eyebrow">Membership</p><h1>Sponsorship requests</h1><p>Confirm that you know and support the applicant, or decline so they can choose another sponsor.</p></div>
+@if (message is not null) { <div class="alert success">@message</div> }
+@if (requests is null) { <p>Loading requests…</p> }
+else if (requests.Count == 0) { <div class="empty-state"><h2>You're all caught up</h2><p>There are no sponsorship requests awaiting your response.</p></div> }
+else { <div class="application-grid">@foreach (var item in requests) { <article class="application-card"><span class="status-pill pending">Pending sponsor</span><h2>@Name(item.ApplicantUserId)</h2><dl><dt>Membership</dt><dd>@item.RequestedMembershipTypeName</dd><dt>Requested</dt><dd>@(item.SubmittedAtUtc?.ToString("d MMM yyyy") ?? "—")</dd></dl><div class="button-row"><button class="primary-action" @onclick="() => Respond(item.Id, true)">Confirm sponsorship</button><button class="secondary-action" @onclick="() => Respond(item.Id, false)">Decline</button></div></article> }</div> }
+@code {
+    private IReadOnlyList<MembershipApplication>? requests; private string? userId; private string? message; private readonly Dictionary<string,string> names=[];
+    protected override async Task OnInitializedAsync() { var principal=(await AuthenticationState.GetAuthenticationStateAsync()).User; userId=Users.GetUserId(principal); await Load(); }
+    private async Task Load() { requests = userId is null ? [] : await Applications.GetPendingForSponsorAsync(userId); foreach(var x in requests){var u=await Users.FindByIdAsync(x.ApplicantUserId); names[x.ApplicantUserId]=u?.Email ?? "Applicant";} }
+    private string Name(string id)=>names.GetValueOrDefault(id,"Applicant");
+    private async Task Respond(Guid id,bool confirm){if(userId is null)return; if(confirm) await Applications.ConfirmSponsorshipAsync(id,userId); else await Applications.DeclineSponsorshipAsync(id,userId); message=confirm?"Sponsorship confirmed. The application is now ready for committee review.":"Sponsorship declined. The applicant may select another sponsor."; await Load();}
+}

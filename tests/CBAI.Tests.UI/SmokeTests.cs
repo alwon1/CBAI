@@ -22,6 +22,6 @@ public sealed class SmokeTests : Bunit.BunitContext
     {
         var cut = Render<Home>();
 
-        Assert.AreEqual("Hello, world!", cut.Find("h1").TextContent);
+        Assert.AreEqual("A community built on connection and contribution.", cut.Find("h1").TextContent);
     }
 }

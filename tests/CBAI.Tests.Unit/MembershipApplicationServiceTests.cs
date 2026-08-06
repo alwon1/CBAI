@@ -58,7 +58,38 @@ public sealed class MembershipApplicationServiceTests
     }
 
     [TestMethod]
-    public async Task SubmitAsync_WithSponsorInSponsorRole_TransitionsToSubmitted_AndAppendsAudit()
+    public async Task DeleteDraftAsync_RemovesDraftAndItsAuditEntry()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var draft = await service.CreateDraftAsync(applicantId);
+
+        await service.DeleteDraftAsync(draft.Id, applicantId);
+
+        Assert.IsEmpty(await service.GetForApplicantAsync(applicantId));
+        Assert.IsEmpty(await service.GetAuditTrailAsync(draft.Id));
+    }
+
+    [TestMethod]
+    public async Task DeleteDraftAsync_DoesNotAllowAnotherApplicantToDeleteDraft()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var (service, users) = await SeedKnownAccountsAsync(scope.ServiceProvider);
+        var applicantId = await UserIdAsync(users, "member@example.com");
+        var anotherUserId = await UserIdAsync(users, "staff@example.com");
+        var draft = await service.CreateDraftAsync(applicantId);
+
+        await Assert.ThrowsExactlyAsync<InvalidMembershipApplicationTransitionException>(
+            () => service.DeleteDraftAsync(draft.Id, anotherUserId));
+
+        Assert.HasCount(1, await service.GetForApplicantAsync(applicantId));
+    }
+
+    [TestMethod]
+    public async Task SubmitAsync_WithSponsorInSponsorRole_TransitionsToPendingSponsor_AndAppendsAudit()
     {
         using var factory = new TestWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
@@ -69,18 +100,18 @@ public sealed class MembershipApplicationServiceTests
         var draft = await service.CreateDraftAsync(applicantId);
         var submitted = await service.SubmitAsync(draft.Id, sponsorId);
 
-        Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
+        Assert.AreEqual(MembershipApplicationStatus.PendingSponsor, submitted.Status);
         Assert.AreEqual(sponsorId, submitted.SponsorUserId);
-        Assert.IsNotNull(submitted.SubmittedAtUtc);
+        Assert.IsNull(submitted.SubmittedAtUtc);
 
         var auditTrail = await service.GetAuditTrailAsync(draft.Id);
-        Assert.AreEqual(2, auditTrail.Count, "Expected 'Created' then 'Submitted' audit entries.");
-        Assert.AreEqual(MembershipApplicationAuditAction.Submitted, auditTrail[1].Action);
+        Assert.AreEqual(2, auditTrail.Count, "Expected creation and sponsorship request audit entries.");
+        Assert.AreEqual(MembershipApplicationAuditAction.SponsorshipRequested, auditTrail[1].Action);
         Assert.AreEqual(applicantId, auditTrail[1].PerformedByUserId, "The applicant is the one performing the submit action.");
     }
 
     [TestMethod]
-    public async Task SubmitAsync_WithSponsorInBoardMemberRole_TransitionsToSubmitted()
+    public async Task SubmitAsync_WithSponsorInBoardMemberRole_TransitionsToPendingSponsor()
     {
         using var factory = new TestWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
@@ -91,7 +122,7 @@ public sealed class MembershipApplicationServiceTests
         var draft = await service.CreateDraftAsync(applicantId);
         var submitted = await service.SubmitAsync(draft.Id, sponsorId);
 
-        Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
+        Assert.AreEqual(MembershipApplicationStatus.PendingSponsor, submitted.Status);
         Assert.AreEqual(sponsorId, submitted.SponsorUserId);
     }
 
@@ -138,6 +169,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
 
         await Assert.ThrowsExactlyAsync<InvalidMembershipApplicationTransitionException>(
             () => service.SubmitAsync(draft.Id, sponsorId));
@@ -155,6 +187,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
 
         var decided = await service.DecideAsync(draft.Id, deciderId, approve: true, notes: "Great fit for the community.");
 
@@ -164,10 +197,10 @@ public sealed class MembershipApplicationServiceTests
         Assert.IsNotNull(decided.DecidedAtUtc);
 
         var auditTrail = await service.GetAuditTrailAsync(draft.Id);
-        Assert.AreEqual(3, auditTrail.Count, "Expected 'Created', 'Submitted', then 'Approved' audit entries.");
-        Assert.AreEqual(MembershipApplicationAuditAction.Approved, auditTrail[2].Action);
-        Assert.AreEqual(deciderId, auditTrail[2].PerformedByUserId);
-        Assert.AreEqual("Great fit for the community.", auditTrail[2].Details);
+        Assert.AreEqual(4, auditTrail.Count, "Expected creation, sponsor request, confirmation, and approval audit entries.");
+        Assert.AreEqual(MembershipApplicationAuditAction.Approved, auditTrail[3].Action);
+        Assert.AreEqual(deciderId, auditTrail[3].PerformedByUserId);
+        Assert.AreEqual("Great fit for the community.", auditTrail[3].Details);
     }
 
     [TestMethod]
@@ -182,6 +215,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
 
         var decided = await service.DecideAsync(draft.Id, deciderId, approve: false, notes: "Incomplete references.");
 
@@ -220,6 +254,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
         await service.DecideAsync(draft.Id, deciderId, approve: true);
 
         await Assert.ThrowsExactlyAsync<InvalidMembershipApplicationTransitionException>(
@@ -240,6 +275,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         var submitted = await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
 
         await Assert.ThrowsExactlyAsync<DecisionMakerUnauthorizedException>(
             () => service.DecideAsync(draft.Id, deciderId, approve: true));
@@ -247,7 +283,7 @@ public sealed class MembershipApplicationServiceTests
         Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
         Assert.IsNull(submitted.DecidedByUserId);
         Assert.IsNull(submitted.DecidedAtUtc);
-        Assert.AreEqual(2, (await service.GetAuditTrailAsync(draft.Id)).Count);
+        Assert.AreEqual(3, (await service.GetAuditTrailAsync(draft.Id)).Count);
     }
 
     [TestMethod]
@@ -261,6 +297,7 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         var submitted = await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
 
         await Assert.ThrowsExactlyAsync<DecisionMakerUnauthorizedException>(
             () => service.DecideAsync(draft.Id, Guid.NewGuid().ToString(), approve: false));
@@ -268,7 +305,7 @@ public sealed class MembershipApplicationServiceTests
         Assert.AreEqual(MembershipApplicationStatus.Submitted, submitted.Status);
         Assert.IsNull(submitted.DecidedByUserId);
         Assert.IsNull(submitted.DecidedAtUtc);
-        Assert.AreEqual(2, (await service.GetAuditTrailAsync(draft.Id)).Count);
+        Assert.AreEqual(3, (await service.GetAuditTrailAsync(draft.Id)).Count);
     }
 
     [TestMethod]
@@ -377,12 +414,13 @@ public sealed class MembershipApplicationServiceTests
 
         var draft = await service.CreateDraftAsync(applicantId);
         await service.SubmitAsync(draft.Id, sponsorId);
+        await service.ConfirmSponsorshipAsync(draft.Id, sponsorId);
         await service.DecideAsync(draft.Id, deciderId, approve: true);
 
         var auditTrail = await service.GetAuditTrailAsync(draft.Id);
 
         CollectionAssert.AreEqual(
-            new[] { MembershipApplicationAuditAction.Created, MembershipApplicationAuditAction.Submitted, MembershipApplicationAuditAction.Approved },
+            new[] { MembershipApplicationAuditAction.Created, MembershipApplicationAuditAction.SponsorshipRequested, MembershipApplicationAuditAction.SponsorshipConfirmed, MembershipApplicationAuditAction.Approved },
             auditTrail.Select(e => e.Action).ToArray());
 
         for (var i = 1; i < auditTrail.Count; i++)

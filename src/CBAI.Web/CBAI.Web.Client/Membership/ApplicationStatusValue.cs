@@ -8,7 +8,9 @@ namespace CBAI.Web.Client.Membership;
 public enum ApplicationStatusValue
 {
     Draft,
+    PendingSponsor,
     Submitted,
+    Waitlisted,
     Approved,
     Rejected,
 }
