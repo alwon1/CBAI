@@ -11,7 +11,7 @@
         <div class="top-row">
             <AuthorizeView>
                 <Authorized>
-                    <FluentProfileMenu Initials="@(context.User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")"
+                    <FluentProfileMenu Initials="@(string.IsNullOrWhiteSpace(context.User.Identity?.Name) ? "U" : char.ToUpperInvariant(context.User.Identity!.Name!.Trim()[0]).ToString())"
                                        FullName="@context.User.Identity?.Name"
                                        EMail="@context.User.Identity?.Name">
                         <HeaderTemplate>
