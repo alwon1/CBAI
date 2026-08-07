@@ -1,0 +1,3 @@
+## 2024-08-07 - Resolved N+1 issue when fetching user roles in Blazor lists
+**Learning:** `UserManager.GetRolesAsync(user)` executes a separate database query for each user. When building list views in Blazor pages (like Admin/Users), calling this inside a `foreach (var user in users)` loop creates a severe N+1 performance bottleneck that grows linearly with the number of users. The underlying `ApplicationDbContext` exposes `UserRoles` and `Roles` `DbSet` properties.
+**Action:** Always batch-fetch identity roles (`DbContext.UserRoles.ToListAsync()`, `DbContext.Roles.ToListAsync()`) into lookups/dictionaries beforehand when constructing ViewModels for a list of users, instead of invoking `UserManager.GetRolesAsync` per user.

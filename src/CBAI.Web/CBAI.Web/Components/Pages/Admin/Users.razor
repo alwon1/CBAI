@@ -144,20 +144,31 @@ else
         var users = await DbContext.Users.ToListAsync();
         var members = await DbContext.Members.ToListAsync();
 
+        // Optimize: Pre-fetch roles to avoid N+1 queries when loading user list
+        var userRoles = await DbContext.UserRoles.ToListAsync();
+        var roles = await DbContext.Roles.ToListAsync();
+
         var membersByUserId = members.ToLookup(m => m.ApplicationUserId);
+        var rolesById = roles.ToDictionary(r => r.Id, r => r.Name ?? string.Empty);
+        var userRolesByUserId = userRoles.ToLookup(ur => ur.UserId);
 
         var viewModels = new List<AdminUserViewModel>();
 
         foreach (var user in users)
         {
-            var roles = await UserManager.GetRolesAsync(user);
+            var userRoleNames = userRolesByUserId[user.Id]
+                .Select(ur => rolesById.TryGetValue(ur.RoleId, out var roleName) ? roleName : null)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Cast<string>()
+                .ToList();
+
             var member = membersByUserId[user.Id].FirstOrDefault();
 
             viewModels.Add(new AdminUserViewModel
             {
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
-                Roles = roles,
+                Roles = userRoleNames,
                 IsEnabled = !user.LockoutEnabled || user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow,
                 IsMember = member != null,
                 MemberStatus = member?.Status,
