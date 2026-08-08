@@ -83,7 +83,7 @@ else
         <TemplateColumn Title="Actions">
             <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ShowSetPasswordDialog(context))">Set Password</FluentButton>
             <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => SendResetLinkAsync(context))">Reset Link</FluentButton>
-            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => DeleteAccountAsync(context))" Style="color: red;">Delete</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ShowDeleteDialog(context))" Style="color: red;" AriaLabel="Delete User">Delete</FluentButton>
         </TemplateColumn>
     </FluentDataGrid>
     <FluentPaginator State="@pagination" />
@@ -96,6 +96,17 @@ else
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
             <FluentButton Appearance="Appearance.Neutral" OnClick="() => isSetPasswordDialogOpen = false">Cancel</FluentButton>
             <FluentButton Appearance="Appearance.Accent" OnClick="SetPasswordAsync">Save</FluentButton>
+        </div>
+    </div>
+</FluentDialog>
+
+<FluentDialog @bind-Visible="isDeleteDialogOpen" Modal="true">
+    <div style="padding: 1rem; width: 300px;">
+        <h3>Delete User</h3>
+        <p>Are you sure you want to delete the user <strong>@selectedUserForAction?.Email</strong>? This action cannot be undone.</p>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="() => isDeleteDialogOpen = false">Cancel</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="DeleteAccountAsync" Style="background-color: var(--error); color: white;">Delete</FluentButton>
         </div>
     </div>
 </FluentDialog>
@@ -123,6 +134,7 @@ else
 
     // Single action state
     private bool isSetPasswordDialogOpen;
+    private bool isDeleteDialogOpen;
     private AdminUserViewModel? selectedUserForAction;
     private string newPassword = string.Empty;
 
@@ -265,13 +277,23 @@ else
         SetSuccessStatusMessage($"Password reset link sent to {user.Email}.");
     }
 
-    private async Task DeleteAccountAsync(AdminUserViewModel userViewModel)
+    private void ShowDeleteDialog(AdminUserViewModel user)
     {
-        var user = await UserManager.FindByIdAsync(userViewModel.Id);
+        selectedUserForAction = user;
+        isDeleteDialogOpen = true;
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        if (selectedUserForAction == null) return;
+
+        var user = await UserManager.FindByIdAsync(selectedUserForAction.Id);
         if (user != null)
         {
             if (!await TryApplyIdentityResultAsync(await UserManager.DeleteAsync(user), "delete account"))
             {
+                isDeleteDialogOpen = false;
+                selectedUserForAction = null;
                 return;
             }
 
@@ -285,6 +307,9 @@ else
 
             await LoadUsersAsync();
         }
+
+        isDeleteDialogOpen = false;
+        selectedUserForAction = null;
     }
 
     private void ShowAddUserDialog()
