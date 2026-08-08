@@ -201,7 +201,11 @@ public sealed class MembershipApplicationService(ApplicationDbContext db, UserMa
             .OrderBy(a => a.CreatedAtUtc).ToList();
 
     public async Task<IReadOnlyList<MembershipApplication>> GetReviewQueueAsync(CancellationToken cancellationToken = default) =>
-        (await db.MembershipApplications.Where(a => a.Status == MembershipApplicationStatus.Submitted || a.Status == MembershipApplicationStatus.Waitlisted || a.Status == MembershipApplicationStatus.Rejected).ToListAsync(cancellationToken))
+        (await db.MembershipApplications
+            // ⚡ Bolt: Eager load AuditEntries to prevent N+1 queries when displaying lists
+            .Include(a => a.AuditEntries)
+            .Where(a => a.Status == MembershipApplicationStatus.Submitted || a.Status == MembershipApplicationStatus.Waitlisted || a.Status == MembershipApplicationStatus.Rejected)
+            .ToListAsync(cancellationToken))
             .OrderBy(a => a.CreatedAtUtc).ToList();
 
     private async Task<MembershipApplication> FindAsync(Guid id, CancellationToken cancellationToken) =>
