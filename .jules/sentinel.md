@@ -1,0 +1,4 @@
+## 2026-07-27 - Enable Account Lockout on Failed Login Attempts
+**Vulnerability:** The password sign-in mechanism in `Login.razor` was configured with `lockoutOnFailure: false`, meaning an attacker could perform unlimited brute-force password guesses without triggering account lockout.
+**Learning:** The default scaffolding comment correctly identified that password failures were not counting towards account lockout, but it was not enabled. In this application architecture, authentication endpoints like this need explicit configuration to enable protections against credential-stuffing and brute-force attacks.
+**Prevention:** Always verify that `SignInManager.PasswordSignInAsync` uses `lockoutOnFailure: true` in authentication endpoints to utilize ASP.NET Core Identity's built-in brute-force protection features.
