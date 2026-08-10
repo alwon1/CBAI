@@ -3,6 +3,7 @@
 @attribute [Authorize(Roles = "Sponsor,BoardMember")]
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using CBAI.Web.Data
 @using CBAI.Web.Membership
 @inject IMembershipApplicationService Applications
@@ -18,7 +19,13 @@ else { <div class="application-grid">@foreach (var item in requests) { <article 
 @code {
     private IReadOnlyList<MembershipApplication>? requests; private string? userId; private string? message; private readonly Dictionary<string,string> names=[];
     protected override async Task OnInitializedAsync() { var principal=(await AuthenticationState.GetAuthenticationStateAsync()).User; userId=Users.GetUserId(principal); await Load(); }
-    private async Task Load() { requests = userId is null ? [] : await Applications.GetPendingForSponsorAsync(userId); foreach(var x in requests){var u=await Users.FindByIdAsync(x.ApplicantUserId); names[x.ApplicantUserId]=u?.Email ?? "Applicant";} }
+    private async Task Load() { requests = userId is null ? [] : await Applications.GetPendingForSponsorAsync(userId);
+        // Optimize: Batch user lookups to avoid N+1 queries when resolving names
+        var applicantIds = requests.Select(x => x.ApplicantUserId).Distinct().ToList();
+        var users = await Users.Users.Where(u => applicantIds.Contains(u.Id)).ToListAsync();
+        var userDict = users.ToDictionary(u => u.Id, u => u.Email ?? "Applicant");
+        foreach(var x in requests){names[x.ApplicantUserId]=userDict.GetValueOrDefault(x.ApplicantUserId, "Applicant");}
+    }
     private string Name(string id)=>names.GetValueOrDefault(id,"Applicant");
     private async Task Respond(Guid id,bool confirm){if(userId is null)return; if(confirm) await Applications.ConfirmSponsorshipAsync(id,userId); else await Applications.DeclineSponsorshipAsync(id,userId); message=confirm?"Sponsorship confirmed. The application is now ready for committee review.":"Sponsorship declined. The applicant may select another sponsor."; await Load();}
 }
