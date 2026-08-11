@@ -1,0 +1,3 @@
+## 2026-07-27 - Contextual ARIA labels for repeating actions
+**Learning:** Blazor lists (like `ReviewApplications` and `SponsorConfirmations`) often use repeating action buttons (e.g., "Approve", "Decline") that lack contextual distinction for screen reader users when navigating by controls. The same issue exists for repeating inputs like `InputTextArea` without an explicit `<label>`.
+**Action:** Always ensure interactive elements within loops have `aria-label` attributes injected with row-specific data (e.g., `aria-label=@($"Approve {Name(item.ApplicantUserId)}")`) to provide clear, actionable context for screen reader users.
