@@ -1,0 +1,3 @@
+## 2026-07-27 - [Blazor EF Core Concurrency and N+1 Fix]
+**Learning:** In the Blazor Server architecture of this project, the EF Core `DbContext` is scoped per circuit. Using `Task.WhenAll` for concurrent database queries (e.g., `UserManager` lookups or `DbContext` queries) causes EF Core concurrency exceptions and N+1 performance bottlenecks.
+**Action:** Avoid `Task.WhenAll` with EF core queries. Data fetching should be batched (e.g., using `.Contains()`) or eager-loaded using `.Include()` instead. SQLite cannot translate DateTimeOffset sorting, so perform client side ordering after eager loading.
