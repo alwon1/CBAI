@@ -1,0 +1,3 @@
+## 2026-07-27 - [Blazor Server N+1 & Concurrent DB Queries]
+**Learning:** Using `Task.WhenAll` to concurrently query the database (e.g., via EF Core or `UserManager`) in a Blazor Server environment is an anti-pattern that leads to N+1 performance bottlenecks and potential EF Core concurrency exceptions because the `DbContext` is scoped per circuit and not thread-safe.
+**Action:** Instead of iterating through lists to make separate database queries for each item or firing concurrent queries, batch queries using `.Contains()` (e.g., fetching a distinct list of IDs first, then querying them all at once) and always eager-load related data (e.g., using `.Include()` on EF Core entities) before looping over the results in the Razor components.

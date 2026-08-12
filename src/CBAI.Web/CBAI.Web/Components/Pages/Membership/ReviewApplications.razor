@@ -15,7 +15,18 @@
 @code {
  private IReadOnlyList<MembershipApplication>? items; private string? userId; private readonly Dictionary<string,string> names=[]; private readonly Dictionary<Guid,string> notes=[]; private readonly Dictionary<Guid,IReadOnlyList<MembershipApplicationAuditEntry>> audits=[];
  protected override async Task OnInitializedAsync(){userId=Users.GetUserId((await AuthenticationState.GetAuthenticationStateAsync()).User);await Load();}
- private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();var userTasks=items.Select(x=>Users.FindByIdAsync(x.ApplicantUserId));var auditTasks=items.Select(x=>Applications.GetAuditTrailAsync(x.Id));var userResults=await Task.WhenAll(userTasks);var auditResults=await Task.WhenAll(auditTasks);for(var i=0;i<items.Count;i++){var x=items[i];names[x.ApplicantUserId]=userResults[i]?.Email??"Applicant";notes.TryAdd(x.Id,"");audits[x.Id]=auditResults[i];}}
+ private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();// Optimization: Avoid N+1 and concurrent DB queries on EF Core by batching user fetch
+var userIds = items.Select(x => x.ApplicantUserId).Distinct().ToList();
+var usersList = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(Users.Users.Where(u => userIds.Contains(u.Id)));
+var userDict = usersList.ToDictionary(u => u.Id, u => u.Email ?? "Applicant");
+
+foreach(var x in items) {
+    names[x.ApplicantUserId] = userDict.GetValueOrDefault(x.ApplicantUserId, "Applicant");
+    notes.TryAdd(x.Id, "");
+
+    // Optimization: Avoid N+1 by eager-loading AuditEntries in GetReviewQueueAsync via .Include()
+    audits[x.Id] = x.AuditEntries.OrderBy(e => e.TimestampUtc).ThenBy(e => e.Id).ToList();
+}}
  private string Name(string id)=>names.GetValueOrDefault(id,"Applicant"); private IReadOnlyList<MembershipApplicationAuditEntry> Audits(Guid id)=>audits.GetValueOrDefault(id,[]);
  private async Task Move(Guid id,MembershipApplicationStatus status){if(userId is null)return;await Applications.ChangeStatusAsync(id,userId,status,notes.GetValueOrDefault(id));await Load();}
 }
