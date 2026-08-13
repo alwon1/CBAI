@@ -56,7 +56,7 @@ else
                                      Required="true"
                                      StyleValue="width: 100%;" />
                     <FluentValidationMessage For="() => sponsor.Email" />
-                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Disabled="submitting">
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Disabled="submitting" Loading="@submitting">
                         Send sponsorship request
                     </FluentButton>
                 </div>
