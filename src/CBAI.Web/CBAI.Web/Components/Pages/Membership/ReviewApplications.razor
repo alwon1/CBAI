@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Identity
 @using CBAI.Web.Data
 @using CBAI.Web.Membership
+@using Microsoft.EntityFrameworkCore
 @inject IMembershipApplicationService Applications
 @inject UserManager<ApplicationUser> Users
 @inject AuthenticationStateProvider AuthenticationState
@@ -15,7 +16,30 @@
 @code {
  private IReadOnlyList<MembershipApplication>? items; private string? userId; private readonly Dictionary<string,string> names=[]; private readonly Dictionary<Guid,string> notes=[]; private readonly Dictionary<Guid,IReadOnlyList<MembershipApplicationAuditEntry>> audits=[];
  protected override async Task OnInitializedAsync(){userId=Users.GetUserId((await AuthenticationState.GetAuthenticationStateAsync()).User);await Load();}
- private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();var userTasks=items.Select(x=>Users.FindByIdAsync(x.ApplicantUserId));var auditTasks=items.Select(x=>Applications.GetAuditTrailAsync(x.Id));var userResults=await Task.WhenAll(userTasks);var auditResults=await Task.WhenAll(auditTasks);for(var i=0;i<items.Count;i++){var x=items[i];names[x.ApplicantUserId]=userResults[i]?.Email??"Applicant";notes.TryAdd(x.Id,"");audits[x.Id]=auditResults[i];}}
+ private async Task Load(){
+     items=await Applications.GetReviewQueueAsync();
+     names.Clear();
+     audits.Clear();
+
+     // ⚡ Bolt Performance Optimization:
+     // Replaced Task.WhenAll with batched query for UserManager lookups to prevent EF Core
+     // concurrency exceptions and resolve N+1 performance bottleneck.
+     var applicantIds = items.Select(x => x.ApplicantUserId).Distinct().ToList();
+     var users = await Users.Users.Where(u => applicantIds.Contains(u.Id)).Select(u => new { u.Id, u.Email }).ToListAsync();
+     var userEmails = users.ToDictionary(u => u.Id, u => u.Email);
+
+     for(var i=0;i<items.Count;i++){
+         var x=items[i];
+         names[x.ApplicantUserId]=userEmails.GetValueOrDefault(x.ApplicantUserId) ?? "Applicant";
+         notes.TryAdd(x.Id,"");
+
+         // ⚡ Bolt Performance Optimization:
+         // Instead of getting Audit trails per application via separate DB query,
+         // they are now eager-loaded via .Include() in GetReviewQueueAsync, thus
+         // eliminating the remaining N+1 query loop.
+         audits[x.Id]=x.AuditEntries;
+     }
+ }
  private string Name(string id)=>names.GetValueOrDefault(id,"Applicant"); private IReadOnlyList<MembershipApplicationAuditEntry> Audits(Guid id)=>audits.GetValueOrDefault(id,[]);
  private async Task Move(Guid id,MembershipApplicationStatus status){if(userId is null)return;await Applications.ChangeStatusAsync(id,userId,status,notes.GetValueOrDefault(id));await Load();}
 }

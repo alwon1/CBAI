@@ -1,0 +1,3 @@
+## 2024-05-15 - [Concurrency and N+1 in Blazor Server EF Core]
+**Learning:** Using `Task.WhenAll` to perform concurrent database queries (such as UserManager lookups or getting Audit trails) causes EF Core concurrency exceptions in Blazor Server architecture because the `DbContext` is scoped per circuit and is not thread-safe. Furthermore, looping with individual DB queries causes an N+1 performance bottleneck.
+**Action:** Always batch queries (e.g. using `Contains()` or `Include()`) to resolve N+1 performance bottlenecks and only use `await` sequentially when dealing with the per-circuit `DbContext` in Blazor components to avoid concurrency exceptions.
