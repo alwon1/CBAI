@@ -3,6 +3,7 @@
 @attribute [Authorize(Roles = "Staff,BoardMember")]
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using CBAI.Web.Data
 @using CBAI.Web.Membership
 @inject IMembershipApplicationService Applications
@@ -15,7 +16,25 @@
 @code {
  private IReadOnlyList<MembershipApplication>? items; private string? userId; private readonly Dictionary<string,string> names=[]; private readonly Dictionary<Guid,string> notes=[]; private readonly Dictionary<Guid,IReadOnlyList<MembershipApplicationAuditEntry>> audits=[];
  protected override async Task OnInitializedAsync(){userId=Users.GetUserId((await AuthenticationState.GetAuthenticationStateAsync()).User);await Load();}
- private async Task Load(){items=await Applications.GetReviewQueueAsync();names.Clear();audits.Clear();var userTasks=items.Select(x=>Users.FindByIdAsync(x.ApplicantUserId));var auditTasks=items.Select(x=>Applications.GetAuditTrailAsync(x.Id));var userResults=await Task.WhenAll(userTasks);var auditResults=await Task.WhenAll(auditTasks);for(var i=0;i<items.Count;i++){var x=items[i];names[x.ApplicantUserId]=userResults[i]?.Email??"Applicant";notes.TryAdd(x.Id,"");audits[x.Id]=auditResults[i];}}
+ private async Task Load(){
+    items=await Applications.GetReviewQueueAsync();
+    names.Clear();
+    audits.Clear();
+
+    // ⚡ Bolt Performance Optimization:
+    // Batch query users to avoid N+1 and EF Core concurrency exceptions
+    var applicantIds = items.Select(x => x.ApplicantUserId).Distinct().ToList();
+    var usersList = await Users.Users.Where(u => applicantIds.Contains(u.Id)).ToListAsync();
+    var userDict = usersList.ToDictionary(u => u.Id, u => u.Email ?? "Applicant");
+
+    foreach(var x in items){
+        names[x.ApplicantUserId] = userDict.GetValueOrDefault(x.ApplicantUserId, "Applicant");
+        notes.TryAdd(x.Id,"");
+        // ⚡ Bolt Performance Optimization:
+        // Audit entries are now eager-loaded via .Include() in GetReviewQueueAsync, avoiding N+1 queries
+        audits[x.Id] = x.AuditEntries.OrderBy(e => e.TimestampUtc).ThenBy(e => e.Id).ToList();
+    }
+ }
  private string Name(string id)=>names.GetValueOrDefault(id,"Applicant"); private IReadOnlyList<MembershipApplicationAuditEntry> Audits(Guid id)=>audits.GetValueOrDefault(id,[]);
  private async Task Move(Guid id,MembershipApplicationStatus status){if(userId is null)return;await Applications.ChangeStatusAsync(id,userId,status,notes.GetValueOrDefault(id));await Load();}
 }

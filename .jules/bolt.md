@@ -1,0 +1,3 @@
+## 2024-11-20 - [EF Core Task.WhenAll Bottleneck in Blazor]
+**Learning:** Using `Task.WhenAll` to concurrently query the database (e.g. `Users.FindByIdAsync` and `Applications.GetAuditTrailAsync` inside a loop) over the same `DbContext` in a Blazor Server app (where DbContext is scoped per circuit) causes N+1 performance bottlenecks and EF Core concurrency exceptions.
+**Action:** Replace `Task.WhenAll` N+1 concurrent loops with batched data fetching using `.Contains()` (e.g. `Users.Users.Where(u => ids.Contains(u.Id)).ToListAsync()`) and eager-loading related data with `.Include()` (e.g. `db.MembershipApplications.Include(a => a.AuditEntries)`).
