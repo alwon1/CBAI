@@ -1,0 +1,3 @@
+## 2026-08-19 - [Adding Loading states to Fluent UI Blazor buttons]
+**Learning:** Fluent UI Blazor buttons (`FluentButton`) do not automatically display a loading indicator when disabled or during async form submission.
+**Action:** When disabling a `FluentButton` during async submission (e.g., using `Disabled="@submitting"`), explicitly add the `Loading` parameter linked to the same boolean (e.g., `Loading="@submitting"`) to provide proper visual feedback to the user.
