@@ -1,0 +1,3 @@
+## 2026-07-27 - [Blazor Server DbContext EF Core N+1 bottleneck]
+**Learning:** In the Blazor Server architecture of this project, the EF Core `DbContext` is scoped per circuit. Using `UserManager` inside loops (e.g. `UserManager.GetRolesAsync`) or making multiple concurrent queries causes concurrent DbContext access issues and leads to severe N+1 query bottlenecks, especially when rendering pages like the Admin Users list.
+**Action:** Always batch queries or use eager loading. To get multiple users' roles, replace `UserManager.GetRolesAsync(user)` within a loop with batched `DbContext.UserRoles` and `DbContext.Roles` queries before the loop to do an in-memory join.
