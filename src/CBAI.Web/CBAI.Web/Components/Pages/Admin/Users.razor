@@ -144,20 +144,27 @@ else
         var users = await DbContext.Users.ToListAsync();
         var members = await DbContext.Members.ToListAsync();
 
+        // ⚡ Bolt: Batch load roles to avoid N+1 query bottleneck inside the loop.
+        // Blazor Server DbContext is scoped per circuit, so doing UserManager.GetRolesAsync in a loop causes concurrent DbContext access issues and slow loading.
+        var userRoles = await DbContext.UserRoles.ToListAsync();
+        var allRoles = await DbContext.Roles.ToListAsync();
+        var rolesById = allRoles.ToDictionary(r => r.Id, r => r.Name ?? string.Empty);
+        var rolesByUserId = userRoles.ToLookup(ur => ur.UserId, ur => rolesById.GetValueOrDefault(ur.RoleId));
+
         var membersByUserId = members.ToLookup(m => m.ApplicationUserId);
 
         var viewModels = new List<AdminUserViewModel>();
 
         foreach (var user in users)
         {
-            var roles = await UserManager.GetRolesAsync(user);
+            var roles = rolesByUserId[user.Id].Where(r => !string.IsNullOrEmpty(r)).ToList();
             var member = membersByUserId[user.Id].FirstOrDefault();
 
             viewModels.Add(new AdminUserViewModel
             {
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
-                Roles = roles,
+                Roles = roles!,
                 IsEnabled = !user.LockoutEnabled || user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow,
                 IsMember = member != null,
                 MemberStatus = member?.Status,
