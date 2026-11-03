@@ -1,6 +1,7 @@
 <Project Sdk="Aspire.AppHost.Sdk/13.4.6">
 
   <ItemGroup>
+    <PackageReference Include="MessagePack" Version="2.5.303" />
     <ProjectReference Include="..\CBAI.Web\CBAI.Web\CBAI.Web.csproj" />
   </ItemGroup>
 
